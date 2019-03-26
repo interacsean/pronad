@@ -1,4 +1,8 @@
-import 'jest';
+// import 'jest';
+import { monadifyPromises } from '../index';
+import '../types/Promise.d.ts';
+
+monadifyPromises();
 
 function createPromise<T>(resOrRej: boolean, val: T): Promise<T> {
   return new Promise((res, rej) => {
@@ -6,21 +10,34 @@ function createPromise<T>(resOrRej: boolean, val: T): Promise<T> {
   });
 }
 
-type Done = () => void;
+describe('map method', () => {
+  it('should map on resolved promises', () => {
+    const result = createPromise(true, 5)
+      .map((resVal: number) => resVal * 2);
 
-describe('map function', () => {
-  it('should map on resolve promises', (done: Done) => {
-    // expect.
-    createPromise(true, 5)
-      .map((resVal: number) => resVal * 5)
-      .then((result: number) => {
-        expect(result).toBe(10);
-        done();
-      })
-      .catch(done);
+    expect(result).resolves.toEqual(10);
   });
 
-  it('', () => {
+  it('should skip rejected promises', () => {
+    const result = createPromise(false, 5)
+      .map((resVal: number) => resVal * 2);
     
+    expect(result).rejects.toEqual(5);
+  });
+});
+
+describe('leftMap method', () => {
+  it('should map on rejected promises', () => {
+    const result = createPromise(false, 5)
+      .leftMap((rejVal: number) => rejVal * 2);
+
+    expect(result).rejects.toEqual(10);
+  });
+
+  it('should skip resolved promises', () => {
+    const result = createPromise(true, 5)
+      .leftMap((rejVal: number) => rejVal * 2);
+    
+    expect(result).resolves.toEqual(5);
   });
 });
