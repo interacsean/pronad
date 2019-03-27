@@ -3,9 +3,9 @@ This module:
 - Extends the native Promise prototype to include monad methods and TypeScript typings.
 - Provides a `Pronad<Rej, Res>` TypeScript type to annotate the rejected state of a promise
 
-It was built to ease frustrations while trying to bridge the gap when working with native Promises which lacked features, and arbitrary monad libraries which lacked async abilities.
+It was built to ease frustrations while trying to bridge the gap when working with native Promises which lacked features and structure around types, and arbitrary monad libraries which lacked async abilities.
 
-(I recommend checking out the Fluture library as another more advanced alternative)
+(I recommend checking out the Fluture library as another more advanced alternative.)
 
 ## How to use
 
@@ -27,20 +27,23 @@ function validateWinner((resVal: string)): Pronad<Error, string> {
 }
 
 const competitionResult: Pronad<Error, string> = playTheGame
-  // only runs on resolved
-  .map((resVal: boolean): string => `Congratulations you won`)
-  // only runs on rejected
-  .rejMap(rejVal: boolean): Error => new Error('You lost the game'))
+  .bimap(
+    // only runs on rejected
+    (rejVal: boolean): Error => new Error('You lost the game'))
+    // only runs on resolved
+    (resVal: boolean): string => `Congratulations you won`)
+  )
+  // only runs on resolved, and should return concrete value or resolved promise
+  .map(someAddPlayerScoreToStringFn)
   // `validateWinner` only runs on resolved, and returns another Promise / Pronad
   .flatMap(validateWinner);
   // You could keep chaining here instead of assigning to a const
 
 const forRender: string = await competitionResult
-  .map(addScoreToString)
-  .rejMap((rejVal: Error | any): string => typeof rejVal === 'Error'
+  // simply switches the rejected value to same type as resolved so it can be safely awaited
+  .recover((rejVal: Error | any): string => typeof rejVal === 'Error'
     ? `Unfortunately you lost: ${rejVal.message}`
     : 'Unfortunately you lost, we can\'t tell you why')
-  .recover(rejVal => rejVal); // simply switches the rejected value to resolved so it can be safely awaited
 ```
 
 The `Pronad` type is interchangable with Promises, they only offer the extra generic slot for notation of the type of the Promise's rejected value*. 
@@ -112,13 +115,16 @@ Promises flatten by design.  You can't try to form a `Pronad<E, Pronad<F, T>>`. 
 
 If a function throws, or you return a `Promise.reject()` from a `.map`, your Pronad will end up in the rejected state, even though the `.map` by definition should retain the state of the monad.
 
+There's still more exploring to do around how solid the rejected side of the `Pronad` type is.
+
 *Them's the breaks*
 
 ****
 
 #### Todo
- - write test and implement recover – test whether the fn can be optional / default to identity and still error if type is not maintained
- - Alternative to Promise.all to convert `Array<Pronad<bad, good>>` and collect all values into a `Pronad<Array<bad>, Array<good>>`.
+ - Explore whether recover fn can be optional / default to identity and still error if type is not maintained
+ - Test and implement fromFalsey
  - Implement tap, doubleTap, bimap
  - Write documentation on each method
- - Provide an import for auto-initialising(?)
+ - Alternative to Promise.all to convert `Array<Pronad<bad, good>>` and collect all values into a `Pronad<Array<bad>, Array<good>>`.
+ - Provide an alternative import file to auto-initialise(?)

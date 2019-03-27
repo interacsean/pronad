@@ -8,7 +8,6 @@ type leftMapPr<E, T> = <F>(fn: (rejVal: E | any) => any) => Pronad<F, T>;
 type leftBind<T> = <E>(fn: (rejVal: E | any) => Promise<T>) => Promise<T>;
 type leftBindPr<E, T> = <F>(fn: (rejVal: E | any) => Pronad<F, T>) => Pronad<F, T>;
 
-
 interface Promise<T> {
   map: <R>(fn: (resVal: T) => R) => Promise<R>,
 
@@ -25,14 +24,22 @@ interface Promise<T> {
 
   cata: <E, R>(rejFn: (rejVal: E | any) => R, resFn: (resVal: T) => R) => Promise<R>,
 
-  recover: <E, R>(fn: (rejVal: E | any) => R) => Promise<R>, // this would just be an alias for catch
+  recover: <E>(fn: (rejVal: E | any) => T) => Promise<T>, // this would just be an alias for catch, with more strict return type
   // we could write an autoRecover but unsure if we can do this with type safety to ensure that the rej type is the same as res
 
+  // todo:
   // bimap
   // tap
-  // doubleTap
-  // and | or (accumulate - or is this like all/race)
+  // doubleTap / biTap
+  // and | or (accumulate - or is this like all/race - a bit but it doesn't collect all rejections, only the first)
 }
+
+interface PromiseConstructor {
+  unit<T>(val: T): Promise<T>,
+  fromFalsey<T, E>(val: T | undefined | null | false, ifFalsey?: E): Pronad<E, T>,
+}
+
+declare var Pronad: PromiseConstructor;
 
 interface Pronad<E, T> extends Promise<T> {
   map: <R>(fn: (resVal: T) => R) => Pronad<E, R>,
@@ -50,5 +57,5 @@ interface Pronad<E, T> extends Promise<T> {
   
   cata: <R>(rejFn: (rejVal: E | any) => R, resFn: (resVal: T) => R) => Promise<R>
 
-  recover: <R>(fn: (rejVal: E | any) => R) => Pronad<never, R>,
+  recover: (fn: (rejVal: E | any) => T) => Promise<T>,
 }

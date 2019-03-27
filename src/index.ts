@@ -7,14 +7,14 @@ export const monadifyPromises = () => {
     return this.then(fn);
   };
   Promise.prototype.rejMap = function<E, T, F>(fn: (rejectedVal: E | any) => F): Pronad<F, T> {
-    return this.catch((e: E | any): Pronad<F, T> => Promise.reject(fn(e)));
+    return this.catch((e: E | any): Pronad<F, never> => Promise.reject(fn(e)));
   };
 
   Promise.prototype.bind = Promise.prototype.flatMap = function<E, T, R>(fn: (resolvedVal: T) => Pronad<E, R>): Pronad<E, R> {
     return this.then(fn);
   };
-  Promise.prototype.rejBind = Promise.prototype.rejFlatMap = function<T, E>(fn: (rejectedVal: E | any) => any): Pronad<E, T> {
-    return this.catch((e: E | any): Pronad<E, T> => Promise.reject(fn(e)));
+  Promise.prototype.rejBind = Promise.prototype.rejFlatMap = function<E, T, F>(fn: (rejectedVal: E | any) => Pronad<F, T>): Pronad<F, T> {
+    return this.catch((e: E | any): Pronad<F, T> => fn(e));
   };
 
   Promise.prototype.cata = function<T, E, R>(
@@ -22,5 +22,9 @@ export const monadifyPromises = () => {
     resFn: (resolvedVal: T) => R,
   ): Pronad<never, R> {
     return this.then(resFn, rejFn);
+  };
+
+  Promise.prototype.recover = function<E, T>(fn: (rejVal: E | any) => T): Promise<T> {
+    return this.catch(fn);
   };
 }

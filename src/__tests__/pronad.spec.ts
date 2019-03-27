@@ -14,14 +14,14 @@ describe('map method', () => {
     const result = createPromise(true, 5)
       .map((resVal: number) => resVal * 2);
 
-    expect(result).resolves.toEqual(10);
+    expect(result).resolves.toBe(10);
   });
 
   it('should skip rejected promises', () => {
     const result = createPromise(false, 5)
       .map((resVal: number) => resVal * 2);
     
-    expect(result).rejects.toEqual(5);
+    expect(result).rejects.toBe(5);
   });
 });
 
@@ -30,14 +30,14 @@ describe('rejMap method', () => {
     const result = createPromise(false, 5)
       .rejMap((rejVal: number) => rejVal * 2);
 
-    expect(result).rejects.toEqual(10);
+    expect(result).rejects.toBe(10);
   });
 
   it('should skip resolved promises', () => {
     const result = createPromise(true, 5)
       .rejMap((rejVal: number) => rejVal * 2);
     
-    expect(result).resolves.toEqual(5);
+    expect(result).resolves.toBe(5);
   });
 });
 
@@ -46,21 +46,21 @@ describe('bind method', () => {
     const result = createPromise(true, 5)
       .bind((resVal: number) => Promise.resolve(resVal * 2));
 
-    expect(result).resolves.toEqual(10);
+    expect(result).resolves.toBe(10);
   });
 
   it('should skip rejected promises', () => {
     const result = createPromise(false, 5)
       .bind((resVal: number) => Promise.resolve(resVal * 2));
     
-    expect(result).rejects.toEqual(5);
+    expect(result).rejects.toBe(5);
   });
 
   it('should return rejected promise', () => {
     const result = createPromise(true, 5)
       .bind((resVal: number) => Promise.reject(resVal * 2));
 
-    expect(result).rejects.toEqual(10);
+    expect(result).rejects.toBe(10);
   });
 });
 
@@ -69,21 +69,21 @@ describe('rej bind method', () => {
     const result = createPromise(false, 5)
       .rejFlatMap((resVal: number) => Promise.resolve(resVal * 2));
 
-    expect(result).resolves.toEqual(10);
+    expect(result).resolves.toBe(10);
   });
 
   it('should skip resolved promises', () => {
     const result = createPromise(false, 5)
       .rejFlatMap((resVal: number) => Promise.resolve(resVal * 2));
     
-    expect(result).rejects.toEqual(5);
+    expect(result).rejects.toBe(5);
   });
 
   it('should return rejected promise', () => {
     const result = createPromise(false, 5)
       .rejFlatMap((resVal: number) => Promise.reject(resVal * 2));
 
-    expect(result).rejects.toEqual(10);
+    expect(result).rejects.toBe(10);
   });
 });
 
@@ -95,7 +95,7 @@ describe('cata method', () => {
         (resVal: number) => resVal * 3,
       );
 
-    expect(result).resolves.toEqual(10);
+    expect(result).resolves.toBe(10);
   });
 
   it('should cata on rejected side', () => {
@@ -105,6 +105,22 @@ describe('cata method', () => {
         (resVal: number) => resVal * 3,
       );
 
-    expect(result).resolves.toEqual(15);
+    expect(result).resolves.toBe(15);
+  });
+});
+
+describe('recover method', () => {
+  it('should recover on rejected side', () => {
+    const result = createPromise(false, 5)
+      .recover((rj: number | any): number => typeof rj === 'number' ? rj * 2 : 0);
+
+    expect(result).resolves.toBe(10);
+  });
+
+  it('should pass over recover on rejesolved side', () => {
+    const result = createPromise(true, 5)
+      .recover((rj: number | any): number => typeof rj === 'number' ? rj * 2 : 0);
+
+    expect(result).resolves.toBe(5);
   });
 });
