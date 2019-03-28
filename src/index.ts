@@ -1,5 +1,3 @@
-// import '../src/types/Promise.d.ts';
-
 export type Pronad<E, T> = Promise<T>;
 
 export const monadifyPromises = () => {
@@ -27,4 +25,8 @@ export const monadifyPromises = () => {
   Promise.prototype.recover = function<E, T>(fn: (rejVal: E | any) => T): Promise<T> {
     return this.catch(fn);
   };
+
+  Promise.fromFalsey = <E, T>(val: T | undefined | null | false, ifFalsey?: E): Pronad<E, T> => {
+    return val !== undefined && val !== null && val !== false ? Promise.resolve(val) : Promise.reject(ifFalsey || null);
+  }
 }

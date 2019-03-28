@@ -24,7 +24,7 @@ interface Promise<T> {
 
   cata: <E, R>(rejFn: (rejVal: E | any) => R, resFn: (resVal: T) => R) => Promise<R>,
 
-  recover: <E>(fn: (rejVal: E | any) => T) => Promise<T>, // this would just be an alias for catch, with more strict return type
+  recover: <E>(fn: (rejVal: E | any) => T) => Promise<T>,
   // we could write an autoRecover but unsure if we can do this with type safety to ensure that the rej type is the same as res
 
   // todo:

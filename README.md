@@ -29,9 +29,9 @@ function validateWinner((resVal: string)): Pronad<Error, string> {
 const competitionResult: Pronad<Error, string> = playTheGame
   .bimap(
     // only runs on rejected
-    (rejVal: boolean): Error => new Error('You lost the game'))
+    (rejVal: boolean): Error => new Error('You lost the game'),
     // only runs on resolved
-    (resVal: boolean): string => `Congratulations you won`)
+    (resVal: boolean): string => 'Congratulations you won'
   )
   // only runs on resolved, and should return concrete value or resolved promise
   .map(someAddPlayerScoreToStringFn)
@@ -43,7 +43,7 @@ const forRender: string = await competitionResult
   // simply switches the rejected value to same type as resolved so it can be safely awaited
   .recover((rejVal: Error | any): string => typeof rejVal === 'Error'
     ? `Unfortunately you lost: ${rejVal.message}`
-    : 'Unfortunately you lost, we can\'t tell you why')
+    : 'Unfortunately you did not win, but we can\'t tell you why')
 ```
 
 The `Pronad` type is interchangable with Promises, they only offer the extra generic slot for notation of the type of the Promise's rejected value*. 
@@ -109,7 +109,7 @@ Functions used in `rejMap`, `rejFlatMap`, `cata` which deal with the rejected st
 
 **You can't wrap Promises**
 
-Promises flatten by design.  You can't try to form a `Pronad<E, Pronad<F, T>>`.  It will flatten to `Pronad<F, T>`.
+Promises flatten by design.  If you try to form a `Pronad<E, Pronad<F, T>>`, it will flatten to `Pronad<F, T>`.
 
 **Voiding the type contract**
 
@@ -123,7 +123,6 @@ There's still more exploring to do around how solid the rejected side of the `Pr
 
 #### Todo
  - Explore whether recover fn can be optional / default to identity and still error if type is not maintained
- - Test and implement fromFalsey
  - Implement tap, doubleTap, bimap
  - Write documentation on each method
  - Alternative to Promise.all to convert `Array<Pronad<bad, good>>` and collect all values into a `Pronad<Array<bad>, Array<good>>`.

@@ -124,3 +124,29 @@ describe('recover method', () => {
     expect(result).resolves.toBe(5);
   });
 });
+
+describe('fromFalsey factory', () => {
+  it('should create resolved promise on truthy', () => {
+    const result = Promise.fromFalsey(5, 0);
+
+    expect(result).resolves.toBe(5);
+  });
+
+  it('should create rejected promise on false', () => {
+    const result = Promise.fromFalsey(false, 0);
+
+    expect(result).rejects.toBe(0);
+  });
+
+  it('should create rejected promise on null', () => {
+    const result = Promise.fromFalsey(null, 0);
+
+    expect(result).rejects.toBe(0);
+  });
+
+  it('should create rejected promise on null', () => {
+    const result = Promise.fromFalsey(undefined, 0);
+
+    expect(result).rejects.toBe(0);
+  });
+});
