@@ -1,0 +1,11 @@
+const thing: Either = await Either.fromPromise(someProm)
+  .flatMap(someSyncFnWResult) // must work with Promise anyway
+  .asyncFlatMap(someAsyncFnWResult) // must work with Promise anyway, but should await result before choosing a side
+  .map(someSyncFnAlwaysRight)
+  .asyncMap(someAsyncFnAlwaysRight)
+  .catchToLeft()
+
+
+Alternative ideas
+
+Write a monad that works with null and doubles as a Maybe, and also works async as above.  Should have the ability to map from Array<Container> to Container<Array>

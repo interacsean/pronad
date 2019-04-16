@@ -1,1 +1,1 @@
-import 'pronad/src/types/Promise';
+import 'pronad/src/ambient';
