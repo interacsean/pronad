@@ -20,7 +20,7 @@ function playTheGame(): Pronad<boolean, boolean> {
 }
 
 /*** Another function that returns a Promise ***/
-function validateWinner((resVal: string)): Pronad<Error, string> {
+function validateWinner(resVal: string): Pronad<Error, string> {
   return Math.random() > 0.5
     ? Promise.resolve(resVal)
     : Promise.reject(new Error('cheating involved');
@@ -68,7 +68,7 @@ Without delving into monad thoery, here's a cheat-sheet on the methods available
 
 **Install the dependency:**
 
-`npm i -S pronad`
+`npm i pronad`
 
 
 **Call the initialiser**
@@ -122,8 +122,8 @@ There's still more exploring to do around how solid the rejected side of the `Pr
 ****
 
 #### Todo
+ - Experiment with alternative rej typing in the Pronad<E,T>
  - Explore whether recover fn can be optional / default to identity and still error if type is not maintained
- - Implement tap, doubleTap, bimap
  - Write documentation on each method
  - Alternative to Promise.all to convert `Array<Pronad<bad, good>>` and collect all values into a `Pronad<Array<bad>, Array<good>>`.
  - Provide an alternative import file to auto-initialise(?)
