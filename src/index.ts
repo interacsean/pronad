@@ -8,8 +8,6 @@ interface PronadConstructor {
   fromNull<E, T>(val: T | undefined | null, ifNull?: E): Pnd<E, T>,
 }
 
-Promise.resolve(5).map(x => x + 2);
-
 export const Pronad: PronadConstructor = {
   unit: <T>(val: T): Pnd<any, T> => Promise.resolve(val),
   fromFalsey: <E, T>(val: T | undefined | null | false, ifFalsey?: E): Pnd<E, T> => {
