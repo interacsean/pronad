@@ -1,14 +1,10 @@
 import { Pnd } from './Pnd';
 
 declare global {
-
-  type bind<T>      = <R>(fn: (resVal: T) => Promise<R>) => Promise<R>;
-  
-  type leftMap<T>      = <E>(fn: (rejVal: E | any) => any) => Promise<T>;
-  
-  type leftBind<T>      = <E>(fn: (rejVal: E | any) => Promise<T>) => Promise<T>;
-  
-  type doubleTap<T>   = <E>(fn: (rejVal: E | any | null, resVal: T | null, isResolved?: boolean) => void) => Promise<T>;
+  type bind<T> = <R>(fn: (resVal: T) => Promise<R>) => Promise<R>;
+  type leftMap<T> = <E>(fn: (rejVal: E | any) => any) => Promise<T>;
+  type leftBind<T> = <E>(fn: (rejVal: E | any) => Promise<T>) => Promise<T>;
+  type doubleTap<T> = <E>(fn: (rejVal: E | any | null, resVal: T | null, isResolved?: boolean) => void) => Promise<T>;
   
   interface Promise<T> {
     map: <R>(fn: (resVal: T) => R) => Promise<R>,
@@ -38,5 +34,3 @@ declare global {
     doubleTap: doubleTap<T>,
   }
 }
-
-// export { Promise }
