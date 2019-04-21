@@ -1,12 +1,3 @@
- - Promises must have all the methods, so that async fns can be .mapped
- - chain methods must result in a Pronad so we can track the rejected type
- - :. Pronad must be ambient type so that Promise knows about it
- - Pronad definition should inherit Promise prototype to maintain consency
-
-
- - How bout Promise<T>.bind => Promise<Pnd<E, T>>.  recover works on resolved promise of Promise<{ left: true, value: T }>, and catch still catches errors
- - in fact why doesn't recover take ((l: E) => T, (err: any) => T)
-
 This module:
 
 - Extends the native Promise prototype to include monad methods and TypeScript typings.

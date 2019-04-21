@@ -1,0 +1,29 @@
+ - Promises must have all the methods, so that async fns can be .mapped
+ - chain methods must result in a Pronad so we can track the rejected type
+ - :. Pronad must be ambient type so that Promise knows about it
+ - Pronad definition should inherit Promise prototype to maintain consency
+
+
+ - How bout Promise<T>.bind => Promise<Pnd<E, T>>.  recover works on resolved promise of Promise<{ left: true, value: T }>, and catch still catches errors
+ - in fact why doesn't recover/settle take ((l: E) => T, (err: any) => T)
+
+ - Any manual reject is indistinguishable from a throw - unless we provide a ducktyping method to validate it.
+  - Therefore we should carry the exception state in the resolved promise - but then why are we bothering using promises as the monad - to work with async fns?
+
+ - on any Righty functor method, then and check to ensure it's not a [ PR_LEFT, value: E ], and exec if not, wrapping result if required
+ - on any Left fn, then and check to ensure it IS [ PR_LEFT, value: E ] and exec only if so
+ - on .settle take ((l: E) => T, (err: any) => T) | ((l: E) => R, (v: T: => R), (err: any) => R)
+ - Pronad.Right = (x) => Promise.resolve([PR_RIGHT, x])
+ - Pronad.Left = (x) => Promise.resolve([PR_LEFT, x])
+
+const thing: Either = await Either.fromPromise(someProm)
+  .flatMap(someSyncFnWResult) // must work with Promise anyway
+  .asyncFlatMap(someAsyncFnWResult) // must work with Promise anyway, but should await result before choosing a side
+  .map(someSyncFnAlwaysRight)
+  .asyncMap(someAsyncFnAlwaysRight)
+  .catchToLeft()
+
+
+Alternative ideas
+
+Write a monad that works with null and doubles as a Maybe, and also works async as above.  Should have the ability to map from Array<Container> to Container<Array>
