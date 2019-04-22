@@ -1,4 +1,4 @@
-import { Pnd, PND_LEFT, PND_RIGHT, PndInner } from './Pnd';
+import { Pnd, PND_LEFT, PND_RIGHT, PndInner, PND_ID } from './Pnd';
 
 export { Pnd, PND_LEFT, PND_RIGHT };
 
@@ -13,6 +13,7 @@ interface PronadConstructor {
 
 const Left = <E>(err: E): Pnd<E, any> => {
   const pndVal = {
+    _pndId: PND_ID,
     state: PND_LEFT,
     left: err,
     right: undefined,
@@ -22,6 +23,7 @@ const Left = <E>(err: E): Pnd<E, any> => {
 
 const Right = <T>(val: T): Pnd<any, T> => {
   const pndVal = {
+    _pndId: PND_ID,
     state: PND_RIGHT,
     left: undefined,
     right: val,
@@ -54,17 +56,19 @@ export const Pronad: PronadConstructor = {
 }
 
 export const monadifyPromises = (cfg: {} = {}) => {
-  // todo: Implement autoConvertPromises
+  // todo: Implement convertRejections
   const useCfg = Object.assign({
-    autoConvertPromises: false,
+    convertRejections: false,
   }, cfg);
 
   Promise.prototype.map = function<E, V, R>(fn: (resVal: V) => R): Pnd<E, R> {
     return this.then((val: PndInner<E, V>): Pnd<E, R> => {
-      if (typeof val === 'object' && val.state === PND_LEFT) {
-        return this as Pnd<E, R>;
-      } else if (typeof val === 'object' && val.state === PND_RIGHT) {
-        return Pronad.Right(fn(val.right as V));
+      if (typeof val === 'object' && val._pndId === PND_ID) {
+        if (val.state === PND_RIGHT) {
+          return Pronad.Right(fn(val.right));
+        } else {
+          return this as Pnd<E, R>;
+        }
       } else {
         throw new Error("Cannot map on a Promise that does not contain a Pronad");
         // fallback for raw promise
@@ -76,10 +80,12 @@ export const monadifyPromises = (cfg: {} = {}) => {
   Promise.prototype.rejMap =
   Promise.prototype.leftMap = function<E, V, F>(fn: (rejVal: E) => F): Pnd<F, V> {
     return this.then((val: PndInner<E, V>): Pnd<F, V> => {
-      if (typeof val === 'object' && val.state === PND_RIGHT) {
-        return this as Pnd<F, V>;
-      } else if (typeof val === 'object' && val.state === PND_LEFT) {
-        return Pronad.Left(fn(val.left as E));
+      if (typeof val === 'object' && val._pndId === PND_ID) {
+        if (val.state === PND_LEFT) {
+          return Pronad.Left(fn(val.left));
+        } else {
+          return this as Pnd<F, V>;
+        }
       } else {
         throw new Error("Cannot leftMap on a Promise that does not contain a Pronad");
       }
@@ -90,14 +96,14 @@ export const monadifyPromises = (cfg: {} = {}) => {
   Promise.prototype.flatMap =
   Promise.prototype.bind = function<E, V, R>(fn: (resVal: V) => Pnd<E, R>): Pnd<E, R> {
     return this.then((val: PndInner<E, V>): Pnd<E, R> => {
-      if (typeof val === 'object' && val.state === PND_LEFT) {
-        return this as Pnd<E, R>;
-      } else if (typeof val === 'object' && val.state === PND_RIGHT) {
-        return fn(val.right as V);
+      if (typeof val === 'object' && val._pndId === PND_ID) {
+        if (val.state === PND_RIGHT) {
+          return fn(val.right);
+        } else {
+          return this as Pnd<E, R>;
+        }
       } else {
         throw new Error("Cannot bind on a Promise that does not contain a Pronad");
-        // fallback for raw promise
-        // return Pronad.Right(fn(val as V));
       }
     }) as Pnd<E, R>;
   };
@@ -109,51 +115,90 @@ export const monadifyPromises = (cfg: {} = {}) => {
   Promise.prototype.leftFlatMap =
   Promise.prototype.leftBind = function<E, F, V>(fn: (rejVal: E) => Pnd<F, V>): Pnd<F, V> {
     return this.then((val: PndInner<E, V>): Pnd<F, V> => {
-      if (typeof val === 'object' && val.state === PND_RIGHT) {
-        return this as Pnd<F, V>;
-      } else if (typeof val === 'object' && val.state === PND_LEFT) {
-        return fn(val.left as E);
+      if (typeof val === 'object' && val._pndId === PND_ID) {
+        if (val.state === PND_LEFT) {
+          return fn(val.left);
+        } else {
+          return this as Pnd<F, V>;
+        }
       } else {
         throw new Error("Cannot leftBind on a Promise that does not contain a Pronad");
-        // fallback for raw promise
-        // return Pronad.Right(fn(val as V));
       }
     }) as Pnd<F, V>;
   };
 
-  // Promise.prototype.cata = function<T, E, R>(
-  //   rejFn: (rejVal: E | any) => R,
-  //   resFn: (resVal: T) => R,
-  // ): Pnd<never, R> {
-  //   return this.then(resFn, rejFn);
-  // };
+  Promise.prototype.cata =
+  Promise.prototype.fold = function<E, V, R>(
+    rejFn: (rejVal: E) => R,
+    resFn: (resVal: V) => R,
+  ): Promise<R> {
+    return this.then((val: PndInner<E, V>): R => {
+      if (typeof val === 'object' && val._pndId === PND_ID) {
+        if (val.state === PND_RIGHT) {
+          return resFn(val.right);
+        } else if (val.state === PND_LEFT) {
+          return rejFn(val.left);
+        } else {
+          // should not happen
+          return (val.right || val.left || val) as unknown as R;
+        }
+      } else {
+        throw new Error("Cannot cata on a Promise that does not contain a Pronad");
+      }
+    });
+  };
 
-  // Promise.prototype.tap = function<E, T>(fn: (val: T) => void): Pnd<E, T> {
-  //   return this.then((val: T): T => {
-  //     fn(val);
-  //     return val;
-  //   });
-  // };
+  Promise.prototype.bimap = function<E, V, F, R>(
+    rejFn: (rejVal: E) => F,
+    resFn: (resVal: V) => R,
+  ): Pnd<F, R> {
+    return this.then((val: PndInner<E, V>): Pnd<F, R> => {
+      if (typeof val === 'object' && val._pndId === PND_ID) {
+        if (val.state === PND_RIGHT) {
+          return Pronad.Right(resFn(val.right));
+        } else if (val.state === PND_LEFT) {
+          return Pronad.Left(rejFn(val.left));
+        } else {
+          // should not happen
+          return val as unknown as Pnd<F, R>;
+        }
+      } else {
+        throw new Error("Cannot bimap on a Promise that does not contain a Pronad");
+      }
+    }) as Pnd<F, R>;
+  };
 
-  // Promise.prototype.doubleTap = function<E, T>(fn: (rejVal: E | any | null, resVal: T | null, isResolved?: boolean) => void): Pnd<E, T> {
-  //   return this.then(
-  //     (resVal: T): T => {
-  //       fn(null, resVal, true);
-  //       return resVal;
-  //     },
-  //     (rejVal: E): Pnd<E, never> => {
-  //       fn(rejVal, null, false);
-  //       return Promise.reject(rejVal);
-  //     },
-  //   );
-  // };
+  Promise.prototype.tap = function<E, V>(fn: (resVal: V) => void): Pnd<E, V> {
+    return this.then((val: PndInner<E, V>): Pnd<E, V> => {
+      if (typeof val === 'object' && val._pndId === PND_ID) {
+        if (val.state === PND_RIGHT) {
+          fn(val.right);
+          return this as Pnd<E, V>;
+        } else {
+          return this as Pnd<E, V>;
+        }
+      } else {
+        throw new Error("Cannot tap on a Promise that does not contain a Pronad");
+      }
+    }) as Pnd<E, V>;
+  };
 
-  // Promise.prototype.bimap = function<T, E, F, R>(
-  //   rejFn: (rejVal: E | any) => F,
-  //   resFn: (resVal: T) => R,
-  // ): Pnd<F, R> {
-  //   return this.then(resFn, (e: E | any): Pnd<F, never> => Promise.reject(rejFn(e)));
-  // };
+  Promise.prototype.doubleTap = function<E, V>(fn: (rejVal: E | null, resVal: V | null, isRight: boolean) => void): Pnd<E, V> {
+    return this.then((val: PndInner<E, V>): Pnd<E, V> => {
+      if (typeof val === 'object' && val._pndId === PND_ID) {
+        if (val.state === PND_RIGHT) {
+          fn(null, val.right, true);
+        } else if (val.state === PND_LEFT) {
+          fn(val.left, null, false);
+        } else {
+          fn(null, null, false);
+        }
+        return this as Pnd<E, V>;
+      } else {
+        throw new Error("Cannot tap on a Promise that does not contain a Pronad");
+      }
+    }) as Pnd<E, V>;
+  };
 
   // Promise.prototype.recover = function<E, T>(fn: (rejVal: E | any) => T): Promise<T> {
   //   return this.catch(fn);

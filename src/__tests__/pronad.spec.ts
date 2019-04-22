@@ -1,7 +1,5 @@
 import { monadifyPromises, Pronad, PND_LEFT, PND_RIGHT } from '../index';
 
-monadifyPromises();
-
 function createPromise<T>(resOrRej: boolean, val: T): Promise<T> {
   return new Promise((res, rej) => {
     setTimeout(() => (resOrRej ? res : rej)(val), 50);
@@ -10,6 +8,8 @@ function createPromise<T>(resOrRej: boolean, val: T): Promise<T> {
 
 describe('pronad', () => {
   const fixture = {};
+
+  monadifyPromises();
 
   describe('right constructor', () => {
     it('should return promise with Pnd', (done) => {
@@ -376,198 +376,163 @@ describe('pronad', () => {
     });
   });
 
-  // describe('bind method', () => {
-  //   it('should bind on resolved promises', (done) => {
-  //     const result = createPromise(true, 5)
-  //       .bind((resVal: number) => Promise.resolve(resVal * 2));
 
-  //     return result.then((r) => {
-  //       expect(r).toEqual(10);
-  //       done();
-  //     });
-  //   });
+  describe('cata method', () => {
+    it('should throw on unwrapped promise', (done) => {
+      const result = createPromise(true, 5)
+        .cata(
+          (rejVal: number) => fixture,
+          (resVal: {}) => ({}),
+        );
 
-  //   it('should skip rejected promises', (done) => {
-  //     const result = createPromise(false, 5)
-  //       .bind((resVal: number) => Promise.resolve(resVal * 2));
-      
-  //     return result.catch(() => {
-  //       expect(r).toEqual(5);
-  //       done();
-  //     });
-  //   });
+      result.catch((e) => {
+        expect(e.message).toBe("Cannot cata on a Promise that does not contain a Pronad");
+        done();
+      });
+    });
+  
+    it('should cata on pronad Left', (done) => {
+      const result = Pronad.Left(5)
+        .cata(
+          (rejVal: number) => fixture,
+          (resVal: {}) => ({}),
+        );
 
-  //   it('should return rejected promise', (done) => {
-  //     const result = createPromise(true, 5)
-  //       .bind((resVal: number) => Promise.reject(resVal * 2));
+      return result.then((r) => { 
+        expect(r).toBe(fixture);
+        done();
+      });
+    });
+  
+    it('should cata on pronad Right', (done) => {
+      const result = Pronad.Right(5)
+        .cata(
+          (rejVal: {}) => ({}),
+          (resVal: number) => fixture,
+        );
 
-  //     return result.catch(() => {
-  //       expect(r).toEqual(10);
-  //       done();
-  //     });
-  //   });
-  // });
+      return result.then((r) => { 
+        expect(r).toBe(fixture);
+        done();
+      });
+    });
+  });
 
-  // describe('rej bind method', () => {
-  //   it('should bind on rejected promises', (done) => {
-  //     const result = createPromise(false, 5)
-  //       .rejFlatMap((resVal: number) => Promise.resolve(resVal * 2));
+  describe('bimap method', () => {
+    it('should throw on unwrapped promise', (done) => {
+      const result = createPromise(true, 5)
+        .bimap(
+          (rejVal: number) => fixture,
+          (resVal: {}) => ({}),
+        );
 
-  //     return result.then((r) => {
-  //       expect(r).toEqual(10);
-  //       done();
-  //     });
-  //   });
+      result.catch((e) => {
+        expect(e.message).toBe("Cannot bimap on a Promise that does not contain a Pronad");
+        done();
+      });
+    });
+  
+    it('should bimap on pronad Left', (done) => {
+      const result = Pronad.Left(5)
+        .bimap(
+          (rejVal: number) => fixture,
+          (resVal: {}) => ({}),
+        );
 
-  //   it('should skip resolved promises', (done) => {
-  //     const result = createPromise(true, 5)
-  //       .rejFlatMap((resVal: number) => Promise.resolve(resVal * 2));
-      
-  //     return result.then((r) => {
-  //       expect(r).toEqual(5);
-  //       done();
-  //     });
-  //   });
+      return result.then((r) => { 
+        expect(r.state).toBe(PND_LEFT);
+        expect(r.left).toBe(fixture);
+        done();
+      });
+    });
+  
+    it('should bimap on pronad Right', (done) => {
+      const result = Pronad.Right(5)
+        .bimap(
+          (rejVal: {}) => ({}),
+          (resVal: number) => fixture,
+        );
 
-  //   it('should return rejected promise', (done) => {
-  //     const result = createPromise(false, 5)
-  //       .rejFlatMap((resVal: number) => Promise.reject(resVal * 2));
+      return result.then((r) => { 
+        expect(r.state).toBe(PND_RIGHT);
+        expect(r.right).toBe(fixture);
+        done();
+      });
+    });
+  });
 
-  //     return result.catch(() => {
-  //       expect(r).toEqual(10);
-  //       done();
-  //     });
-  //   });
-  // });
+  describe('tap method', () => {
+    it('should call on Right and return unaffected', (done) => {
+      const fn = jest.fn();
+      const right = Pronad.Right(fixture)
+      const result = right.tap(fn);
 
-  // describe('cata method', () => {
-  //   it('should cata on resolved side', (done) => {
-  //     const result = createPromise(true, 5)
-  //       .cata(
-  //         (rejVal: number) => rejVal * 2,
-  //         (resVal: number) => resVal * 3,
-  //       );
+      return result.then((r) => {
+        expect(result).toEqual(right);
+        expect(fn).toHaveBeenCalledWith(fixture);
+        done();
+      });
+    });
 
-  //     return result.then((r) => {
-  //       expect(r).toEqual(15);
-  //       done();
-  //     });
-  //   });
+    it('should skip rejected and return unaffected', (done) => {
+      const fn = jest.fn();
+      const left = Pronad.Left(fixture)
+      const result = left.tap(fn);
 
-  //   it('should cata on rejected side', (done) => {
-  //     const result = createPromise(false, 5)
-  //       .cata(
-  //         (rejVal: number) => rejVal * 2,
-  //         (resVal: number) => resVal * 3,
-  //       );
+      return result.then((r) => {
+        expect(result).toEqual(left);
+        expect(fn).not.toHaveBeenCalled();
+        done();
+      });
+    });
+  });
 
-  //     return result.then((r) => {
-  //       expect(r).toEqual(10);
-  //       done();
-  //     });
-  //   });
-  // });
+  describe('doubleTap method', () => {
+    it('should call on resolved and return unaffected', (done) => {
+      const fn = jest.fn();
+      const right = Pronad.Right(fixture)
+      const result = right.doubleTap(fn);
 
-  // describe('bimap method', () => {
-  //   it('should bimap on resolved side', (done) => {
-  //     const result = createPromise(true, 5)
-  //       .bimap(
-  //         (rejVal: number) => rejVal * 2,
-  //         (resVal: number) => resVal * 3,
-  //       );
+      return result.then((r) => {
+        expect(result).toEqual(right);
+        expect(fn).toHaveBeenCalledWith(null, fixture, true);
+        done();
+      });
+    });
 
-  //     return result.then((r) => {
-  //       expect(r).toEqual(15);
-  //       done();
-  //     });
-  //   });
+    it('should skip rejected and return unaffected', (done) => {
+      const fn = jest.fn();
+      const left = Pronad.Left(fixture)
+      const result = left.doubleTap(fn);
 
-  //   it('should bimap on rejected side', (done) => {
-  //     const result = createPromise(false, 5)
-  //       .bimap(
-  //         (rejVal: number) => rejVal * 2,
-  //         (resVal: number) => resVal * 3,
-  //       );
+      return result.then(() => {
+        expect(result).toEqual(left);
+        expect(fn).toHaveBeenCalledWith(fixture, null, false);
+        done();
+      });
+    });
+  });
 
-  //     return result.catch(() => {
-  //       expect(r).toEqual(10);
-  //       done();
-  //     });
-  //   });
-  // });
 
-  // describe('recover method', () => {
-  //   it('should recover on rejected side', (done) => {
-  //     const result = createPromise(false, 5)
-  //       .recover((rj: number | any): number => typeof rj === 'number' ? rj * 2 : 0);
+  describe('getOrElse method', () => {
+    it('should getOrElse on Left side', (done) => {
+      const result = Pronad.Left(5)
+        .getOrElse((rj: number): {} => fixture);
 
-  //     return result.then((r) => {
-  //       expect(r).toEqual(10);
-  //       done();
-  //     });
-  //   });
+      return result.then((r) => {
+        expect(r).toEqual(fixture);
+        done();
+      });
+    });
 
-  //   it('should pass over recover on rejesolved side', (done) => {
-  //     const result = createPromise(true, 5)
-  //       .recover((rj: number | any): number => typeof rj === 'number' ? rj * 2 : 0);
+    it('should pass over getOrElse on Right side', (done) => {
+      const result = Pronad.Right(fixture)
+        .getOrElse((rejVal: any): {} => ({ not: 'ever' }));
 
-  //     return result.then((r) => {
-  //       expect(r).toEqual(5);
-  //       done();
-  //     });
-  //   });
-  // });
-
-  // describe('tap method', () => {
-  //   it('should call on resolved and return unaffected', (done) => {
-  //     const fn = jest.fn();
-  //     const result = createPromise(true, 5)
-  //       .tap(fn);
-
-  //     return result.then((r) => {
-  //       expect(r).toEqual(5);
-  //       expect(fn).toHaveBeenCalledWith(5);
-  //       done();
-  //     });
-  //   });
-
-  //   it('should skip rejected and return unaffected', (done) => {
-  //     const fn = jest.fn();
-  //     const result = createPromise(false, 5)
-  //       .tap(fn);
-
-  //     return result.catch(() => {
-  //       expect(r).toEqual(5);
-  //       expect(fn).not.toHaveBeenCalled();
-  //       done();
-  //     });
-  //   });
-  // });
-
-  // describe('doubleTap method', () => {
-  //   it('should call on resolved and return unaffected', (done) => {
-  //     const fn = jest.fn();
-  //     const result = createPromise(true, 5)
-  //       .doubleTap(fn);
-
-  //     return result.then((r) => {
-  //       expect(r).toEqual(5);
-  //       expect(fn).toHaveBeenCalledWith(null, 5, true);
-  //       done();
-  //     });
-  //   });
-
-  //   it('should skip rejected and return unaffected', (done) => {
-  //     const fn = jest.fn();
-  //     const result = createPromise(false, 5)
-  //       .doubleTap(fn);
-
-  //     return result.catch(() => {
-  //       expect(r).toEqual(5);
-  //       expect(fn).toHaveBeenCalledWith(5, null, false);
-  //       done();
-  //     });
-  //   });
-  // });
-
+      return result.then((r) => {
+        expect(r).toEqual(fixture);
+        done();
+      });
+    });
+  });
 });

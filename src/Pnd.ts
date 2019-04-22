@@ -1,7 +1,7 @@
 type bindPr<E, V> = <R>(fn: (resVal: V) => Pnd<E, R>) => Pnd<E, R>;
 type leftMapPr<E, V> = <F>(fn: (rejVal: E) => F) => Pnd<F, V>;
-type leftBindPr<E, V> = <F, R>(fn: (rejVal: E) => Pnd<F, V>) => Pnd<F, V>;
-type doubleTapPr<E, V> = (fn: (rejVal: E | any | null, resVal: V | null, isResolved?: boolean) => void) => Pnd<E, V>;
+type leftBindPr<E, V> = <F>(fn: (rejVal: E) => Pnd<F, V>) => Pnd<F, V>;
+type cata<E, V> = <R>(rejFn: (rejVal: E) => R, resFn: (resVal: V) => R) => Promise<R>
 
 export interface Pnd<E, V> {
   map: <R>(fn: (resVal: V) => R) => Pnd<E, R>,
@@ -24,24 +24,34 @@ export interface Pnd<E, V> {
   leftFlatMap: leftBindPr<E, V>,
   leftBind: leftBindPr<E, V>,
   
-  // cata: <R>(rejFn: (rejVal: E | any) => R, resFn: (resVal: T) => R) => Promise<R>
+  cata: cata<E, V>,
+  fold: cata<E, V>,
 
-  // bimap: <E, F, R>(rejFn: (rejVal: E | any) => F, resFn: (resVal: T) => R) => Pnd<F, R>,
-
-  // recover: (fn: (rejVal: E | any) => T) => Promise<T>,
-
-  // tap: (fn: (val: T) => void) => Pnd<E, V>,
+  bimap: <E, F, R>(rejFn: (rejVal: E) => F, resFn: (resVal: V) => R) => Pnd<F, R>,
   
-  // doubleTap: doubleTapPr<E, V>,
+  tap: (fn: (val: V) => void) => Pnd<E, V>,
+  
+  doubleTap: (fn: ((rejVal: E | null, resVal: V | null, isRight: boolean) => void) | ((rejVal: E | null, resVal: V | null) => void)) => Pnd<E, V>,
+
+  getOrElseConst: (orElse: V, catchFn?: (err: any) => V) => Promise<V>,
+
+  getOrElse: <E>(fn: (rejVal: E) => V, catchFn?: (err: any) => V) => Promise<V>,
 }
 
-export const PND_LEFT = Symbol('LEFT');
-export const PND_RIGHT = Symbol('RIGHT');
+export const PND_LEFT = 'LEFT';
+export const PND_RIGHT = 'RIGHT';
+export const PND_ID = Symbol('Pronad');
 
 export type PndInner<E, T> = {
-  state: Symbol,
-  left: E | undefined,
-  right: T | undefined,
+  _pndId: symbol,
+} & {
+  state: 'LEFT',
+  left: E,
+  right: undefined,
+} & {
+  state: 'RIGHT',
+  left: undefined,
+  right: T,
 }
 
 // export type Pnd<E, T> = Promise<PndInner<E, T>>;
