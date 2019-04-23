@@ -33,7 +33,7 @@ export interface Pnd<E, V> {
   
   doubleTap: (fn: ((rejVal: E | null, resVal: V | null, isRight: boolean) => void) | ((rejVal: E | null, resVal: V | null) => void)) => Pnd<E, V>,
 
-  getOrElseConst: (orElse: V, catchFn?: (err: any) => V) => Promise<V>,
+  getOrElseConst: (orElse: V, catchValOrFn?: V | ((err: any) => V), execFn?: boolean) => Promise<V>,
 
   getOrElse: <E>(fn: (rejVal: E) => V, catchFn?: (err: any) => V) => Promise<V>,
 }

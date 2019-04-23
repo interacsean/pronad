@@ -1,4 +1,4 @@
-import { monadifyPromises, Pronad, PND_LEFT, PND_RIGHT } from '../index';
+import { monadifyPromises, Pronad, Pnd, PND_LEFT, PND_RIGHT } from '../index';
 
 function createPromise<T>(resOrRej: boolean, val: T): Promise<T> {
   return new Promise((res, rej) => {
@@ -12,8 +12,18 @@ describe('pronad', () => {
   monadifyPromises();
 
   describe('right constructor', () => {
-    it('should return promise with Pnd', (done) => {
+    it('should return Pronad Right', (done) => {
       const result = Pronad.Right(fixture);
+
+      return result.then((r) => {
+        expect(r.state).toBe(PND_RIGHT);
+        expect(r.right).toBe(fixture);
+        done();
+      });
+    });
+
+    it('should resolve value into Pronad Right', (done) => {
+      const result = Pronad.Right(createPromise(true, fixture));
 
       return result.then((r) => {
         expect(r.state).toBe(PND_RIGHT);
@@ -24,8 +34,18 @@ describe('pronad', () => {
   });
 
   describe('left constructor', () => {
-    it('should return promise with Pnd', (done) => {
+    it('should return Pronad Left', (done) => {
       const result = Pronad.Left(fixture);
+
+      return result.then((r) => {
+        expect(r.state).toBe(PND_LEFT);
+        expect(r.left).toBe(fixture);
+        done();
+      });
+    });
+
+    it('should resolve value into Pronad Left', (done) => {
+      const result = Pronad.Left(createPromise(true, fixture));
 
       return result.then((r) => {
         expect(r.state).toBe(PND_LEFT);
@@ -194,6 +214,17 @@ describe('pronad', () => {
         done();
       });
     });
+  
+    it('should map on pronad Right and await result', (done) => {
+      const result = Pronad.Right(5)
+        .map((resVal: number) => createPromise(true, fixture));
+
+      return result.then((r) => { 
+        expect(r.state).toBe(PND_RIGHT);
+        expect(r.right).toBe(fixture);
+        done();
+      });
+    });
 
     it('should skip rejected promises', (done) => {
       const result = createPromise(false, fixture)
@@ -206,7 +237,7 @@ describe('pronad', () => {
     });
 
     it('should skip on Pronad Left', (done) => {
-      const result = Pronad.Left(fixture)
+      const result = Pronad.Left<{}, number>(fixture)
         .map((resVal: number) => 5);
       
       return result.then((r) => {
@@ -230,7 +261,7 @@ describe('pronad', () => {
     });
   
     it('should skip on pronad Right', (done) => {
-      const result = Pronad.Right(fixture)
+      const result = Pronad.Right<number, {}>(fixture)
         .rejMap((resVal: number) => 5);
 
       return result.then((r) => { 
@@ -308,7 +339,7 @@ describe('pronad', () => {
     });
 
     it('should skip on Pronad Left', (done) => {
-      const result = Pronad.Left(fixture)
+      const result = Pronad.Left<{}, number>(fixture)
         .bind((resVal: number) => Pronad.Right(5));
       
       return result.then((r) => {
@@ -365,7 +396,7 @@ describe('pronad', () => {
     });
 
     it('should skip on Pronad Left', (done) => {
-      const result = Pronad.Left(fixture)
+      const result = Pronad.Left<{}, number>(fixture)
         .bind((resVal: number) => Pronad.Right(5));
       
       return result.then((r) => {
@@ -534,5 +565,131 @@ describe('pronad', () => {
         done();
       });
     });
+
+    it('should catch on rejected promise', (done) => {
+      const result = createPromise(false, {})
+        .getOrElse(
+          (rejVal: any): {} => ({ not: 'ever' }),
+          (err: any): {} => fixture );
+
+      return result.then((r) => {
+        expect(r).toEqual(fixture);
+        done();
+      });
+    });
   });
+
+  describe('getOrElseConst method', () => {
+    it('should getOrElseConst on Left side', (done) => {
+      const result = Pronad.Left(5)
+        .getOrElseConst(fixture);
+
+      return result.then((r) => {
+        expect(r).toEqual(fixture);
+        done();
+      });
+    });
+
+    it('should pass over getOrElseConst on Right side', (done) => {
+      const result = Pronad.Right(fixture)
+        .getOrElseConst(5);
+
+      return result.then((r) => {
+        expect(r).toEqual(fixture);
+        done();
+      });
+    });
+
+    it('should catch on rejected promise, value', (done) => {
+      const result = createPromise(false, {})
+        .getOrElseConst(
+          5,
+          fixture,
+        );
+
+      return result.then((r) => {
+        expect(r).toEqual(fixture);
+        done();
+      });
+    });
+
+    it('should catch on rejected promise, exec fn', (done) => {
+      const result = createPromise(false, {})
+        .getOrElseConst(
+          5,
+          (err: any): {} => fixture,
+          true,
+        );
+
+      return result.then((r) => {
+        expect(r).toEqual(fixture);
+        done();
+      });
+    });
+
+    it('should catch on rejected promise, returning fn as val', (done) => {
+      const fixtureFn = (a: number) => a.toString;
+      const result = createPromise(false, {})
+        .getOrElseConst(
+          5,
+          fixtureFn,
+        );
+
+      return result.then((r) => {
+        expect(r).toEqual(fixtureFn);
+        done();
+      });
+    });
+  });
+
+  describe('catch guard', () => {
+    const isError = (mbErr: any): mbErr is Error => mbErr.message && mbErr.name;
+
+    const makeResPromise = (x: any): Promise<{}> => createPromise(true, fixture);
+    const makeRejPromiseError = (x: any): Promise<{}> => createPromise(false, new Error('fixture')) as unknown as Promise<{}>;
+    const makeRejPromiseThrows = (x: any): Promise<{}> => createPromise(false, fixture) as unknown as Promise<{}>;
+
+    // should this be actual ts guard - or try not to tie to ts functionality too tightly
+    const errorGuard = Pronad.makeCatchGuard<Error>((err: any): Error => {
+      if (isError(err)) return err;
+      else if (typeof err === 'string') return new Error(err)
+      else throw err;
+    });
+
+    it('should abide type requirement', () => {
+      const newMapFn = errorGuard(makeResPromise);
+    });
+
+    it('should pass through resolved promises', (done) => {
+      const newMapFn = errorGuard(makeResPromise);
+      const result = newMapFn(5);
+
+      return result.then((r) => { 
+        expect(r.state).toBe(PND_RIGHT);
+        expect(r.right).toBe(fixture);
+        done();
+      });
+    });
+
+    it('should pass through resolved promises', (done) => {
+      const newMapFn = errorGuard(makeRejPromiseError);
+      const result = newMapFn(5);
+
+      return result.then((r) => { 
+        expect(r.state).toBe(PND_LEFT);
+        expect(r.left.message).toBe('fixture');
+        done();
+      });
+    });
+
+    it('should still throw if catcher fails', (done) => {
+      const newMapFn = errorGuard(makeRejPromiseThrows);
+      const result = newMapFn(5);
+
+      return result.catch((e) => { 
+        expect(e.state).toBe(fixture);
+        done();
+      });
+    });
+  })
 });

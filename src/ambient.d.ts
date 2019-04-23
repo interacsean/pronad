@@ -33,7 +33,7 @@ declare global {
     
     doubleTap: <E>(fn: ((rejVal: E | any | null, resVal: T | null, isRight: boolean) => void) | ((rejVal: E | any | null, resVal: T | null) => void)) => Pnd<E, T>,
     
-    getOrElseConst: (orElse: T, catchFn?: (err: any) => T) => Promise<T>,
+    getOrElseConst: (orElse: T, catchValOrFn?: T | ((err: any) => T), execFn?: boolean) => Promise<T>,
 
     getOrElse: <E>(fn: (rejVal: E | any) => T, catchFn?: (err: any) => T) => Promise<T>,
   }
