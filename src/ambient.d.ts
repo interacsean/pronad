@@ -1,14 +1,15 @@
-import { Pnd, PndInner } from './Pnd';
+import { Pronad, PronadInner } from './Pronad';
 
 declare global {
-  type bind<T> = <E, R>(fn: (resVal: T) => Pnd<E, R>) => Pnd<E, R>;
-  type leftMap<T> = <E, F, R>(fn: (rejVal: E | any) => F) => Pnd<F, T>;
-  type leftBind<T> = <E, F>(fn: (rejVal: E | any) => Pnd<F, T>) => Pnd<F, T>;
+  type bind<T> = <E, R>(fn: (resVal: T) => Pronad<E, R>) => Pronad<E, R>;
+  type leftMap<T> = <E, F, R>(fn: (rejVal: E | any) => F) => Pronad<F, T>;
+  type leftBind<T> = <E, F>(fn: (rejVal: E | any) => Pronad<F, T>) => Pronad<F, T>;
   type cata<T> = <E, R>(rejFn: (rejVal: E | any) => R, resFn: (resVal: T) => R) => Promise<R>;
   
   interface Promise<T> {
-    // resolve: (resVal: T) => Pnd<any, T>,
-    map: <E, R>(fn: (resVal: T) => R) => Pnd<E, R>,
+    // resolve: (resVal: T) => Pronad<any, T>,
+    map: <E, R>(fn: (resVal: T) => R) => Pronad<E, R>,
+    anden: <E, R>(onfulfilled: (value: PronadInner<E, T>) => R) => Pronad<E, R>,
   
     chain: bind<T>,
     flatMap: bind<T>,
@@ -27,13 +28,13 @@ declare global {
     cata: cata<T>,
     fold: cata<T>,
   
-    bimap: <E, F, R>(rejFn: (rejVal: E | any) => F, resFn: (resVal: T) => R) => Pnd<F, R>,
+    bimap: <E, F, R>(rejFn: (rejVal: E | any) => F, resFn: (resVal: T) => R) => Pronad<F, R>,
   
-    tap: <E>(fn: (val: T) => void) => Pnd<E, T>,
+    tap: <E>(fn: (val: T) => void) => Pronad<E, T>,
     
-    doubleTap: <E>(fn: ((rejVal: E | any | null, resVal: T | null, isRight: boolean) => void) | ((rejVal: E | any | null, resVal: T | null) => void)) => Pnd<E, T>,
+    doubleTap: <E>(fn: ((rejVal: E | any | null, resVal: T | null, isRight: boolean) => void) | ((rejVal: E | any | null, resVal: T | null) => void)) => Pronad<E, T>,
     
-    getOrElseConst: (orElse: T, catchValOrFn?: T | ((err: any) => T), execFn?: boolean) => Promise<T>,
+    getOr: (orElse: T, catchValOrFn?: T | ((err: any) => T), execFn?: boolean) => Promise<T>,
 
     getOrElse: <E>(fn: (rejVal: E | any) => T, catchFn?: (err: any) => T) => Promise<T>,
   }

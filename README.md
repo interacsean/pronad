@@ -1,3 +1,7 @@
+### Readme needs updating ###
+
+___
+
 This module:
 
 - Extends the native Promise prototype to include monad methods and TypeScript typings.
@@ -122,7 +126,10 @@ There's still more exploring to do around how solid the rejected side of the `Pr
 ****
 
 #### Todo
- - Experiment with alternative rej typing in the Pronad<E,T>
+ - Update readme
+ - Consider how to provide pure version as well as wrapped
+ - Check where types are failing on usage with containing null
+ - Convert to flow
  - Explore whether recover fn can be optional / default to identity and still error if type is not maintained
  - Write documentation on each method
  - Alternative to Promise.all to convert `Array<Pronad<bad, good>>` and collect all values into a `Pronad<Array<bad>, Array<good>>`.

@@ -1,0 +1,61 @@
+type bindPr<E, T> = <R>(fn: (resVal: T) => Pronad<E, R>) => Pronad<E, R>;
+type leftMapPr<E, T> = <F>(fn: (rejVal: E) => F) => Pronad<F, T>;
+type leftBindPr<E, T> = <F>(fn: (rejVal: E) => Pronad<F, T>) => Pronad<F, T>;
+type cata<E, T> = <R>(rejFn: (rejVal: E) => R, resFn: (resVal: T) => R) => Promise<R>
+
+export interface Pronad<E, T> {
+  map: <R>(fn: (resVal: T) => R) => Pronad<E, R>,
+  
+  // Unable to extend Promise but need these to satisfy casting
+  // then: <R>(onfulfilled: (value: any) => R) => Pronad<E, R>,
+  then<TResult1 = T, TResult2 = never>(onfulfilled?: ((value: T) => TResult1 | PromiseLike<TResult1>) | undefined | null, onrejected?: ((reason: any) => TResult2 | PromiseLike<TResult2>) | undefined | null): Promise<TResult1 | TResult2>;
+  anden: <R>(onfulfilled: (value: PronadInner<E, T>) => R) => Pronad<E, R>,
+
+  // catch: <R>(onerror: (err: any) => R) => Pronad<any, R>,
+  catch<TResult = never>(onrejected?: ((reason: any) => TResult | PromiseLike<TResult>) | undefined | null): Promise<T | TResult>;
+
+  readonly [Symbol.toStringTag]: string,
+
+  chain: bindPr<E, T>,
+  flatMap: bindPr<E, T>,
+  bind: bindPr<E, T>,
+  
+  rejMap: leftMapPr<E, T>,
+  leftMap: leftMapPr<E, T>,
+  
+  rejChain: leftBindPr<E, T>,
+  rejFlatMap: leftBindPr<E, T>,
+  rejBind: leftBindPr<E, T>,
+  leftChain: leftBindPr<E, T>,
+  leftFlatMap: leftBindPr<E, T>,
+  leftBind: leftBindPr<E, T>,
+  
+  cata: cata<E, T>,
+  fold: cata<E, T>,
+
+  bimap: <E, F, R>(rejFn: (rejVal: E) => F, resFn: (resVal: T) => R) => Pronad<F, R>,
+  
+  tap: (fn: (val: T) => void) => Pronad<E, T>,
+  
+  doubleTap: (fn: ((rejVal: E | null, resVal: T | null, isRight: boolean) => void) | ((rejVal: E | null, resVal: T | null) => void)) => Pronad<E, T>,
+
+  getOr: (orElse: T, catchValOrFn?: T | ((err: any) => T), execFn?: boolean) => Promise<T>,
+
+  getOrElse: <E>(fn: (rejVal: E) => T, catchFn?: (err: any) => T) => Promise<T>,
+}
+
+export const PND_LEFT = 'LEFT';
+export const PND_RIGHT = 'RIGHT';
+export const PND_ID = Symbol('Pronad');
+
+export type PronadInner<E, T> = {
+  _pndId: symbol,
+} & ({
+  state: 'LEFT',
+  left: E,
+  right: undefined,
+} | {
+  state: 'RIGHT',
+  left: undefined,
+  right: T,
+})
