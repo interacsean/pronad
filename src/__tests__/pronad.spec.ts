@@ -1,6 +1,4 @@
-import { monadifyPromises, Pronad } from '../index';
-
-monadifyPromises();
+import * as P from '../index';
 
 function createPromise<T>(resOrRej: boolean, val: T): Promise<T> {
   return new Promise((res, rej) => {
@@ -9,335 +7,415 @@ function createPromise<T>(resOrRej: boolean, val: T): Promise<T> {
 }
 
 describe('pronad', () => {
-  describe('map method', () => {
-    it('should map on resolved promises', (done) => {
-      const result = createPromise(true, 5)
-        .map((resVal: number) => resVal * 2);
+  const fixture = {};
 
-      result.then(() => {
-        expect(result).resolves.toBe(10);
-        done();
-      });
+  describe('right', () => {
+    it('should be recognised by isRight', () => {
+      const result = P.right(fixture);
+
+      expect(P.isRight(result)).toBe(true);
+      expect(P.isLeft(result)).toBe(false);
     });
+    it('should be not recognised by isLeft', () => {
+      const result = P.right(fixture);
 
-    it('should skip rejected promises', (done) => {
-      const result = createPromise(false, 5)
-        .map((resVal: number) => resVal * 2);
+      expect(P.isLeft(result)).toBe(false);
+      expect(P.isRight(result)).toBe(true);
+    });
+    it('has aliases', () => {
+      expect(P.right).toBe(P.val);
+      expect(P.isRight).toBe(P.isVal);
+    });
+  });
+  
+  describe('left', () => {
+    it('should be recognised by isLeft', () => {
+      const result = P.left(fixture);
+
+      expect(P.isLeft(result)).toBe(true);
+      expect(P.isRight(result)).toBe(false);
+    });
+    it('should be not recognised by isRight', () => {
+      const result = P.left(fixture);
       
-      result.catch(() => {
-        expect(result).rejects.toBe(5);
-        done();
-      });
+      expect(P.isRight(result)).toBe(false);
+      expect(P.isLeft(result)).toBe(true);
+    });
+    it('has aliases', () => {
+      expect(P.left).toBe(P.err);
+      expect(P.isLeft).toBe(P.isErr);
     });
   });
 
-  describe('rejMap method', () => {
-    it('should map on rejected promises', (done) => {
-      const result = createPromise(false, 5)
-        .rejMap((rejVal: number) => rejVal * 2);
+  describe('map', () => {
+    it('should map a Right', () => {
+      const fn: (v: any) => any = jest.fn().mockImplementation(() => fixture);
+      const valFix = {}
+      const right = P.right(valFix);
 
-      result.catch(() => {
-        expect(result).rejects.toBe(10);
-        done();
-      })
+      const result: P.Monad<any, {}> = P.map(fn, right);
+
+      expect(P.isRight(result)).toBe(true);
+      expect(P.getRight(result as P.Right<{}>)).toBe(fixture);
+      expect(fn).toHaveBeenCalledWith(valFix);
     });
+    it('should skip a Left', () => {
+      const fn = jest.fn().mockImplementation(() => fixture);
+      const valFix = {}
+      const right = P.left(valFix);
 
-    it('should skip resolved promises', (done) => {
-      const result = createPromise(true, 5)
-        .rejMap((rejVal: number) => rejVal * 2);
+      const result: P.Monad<any, {}> = P.map(fn, right);
+
+      expect(P.isRight(result)).toBe(false);
+      expect(P.getRight(result as P.Right<{}>)).toBeUndefined();
+      expect(fn).not.toHaveBeenCalled();
+    });
+    it('should be curried', () => {
+      const fn: (v: any) => any = jest.fn().mockImplementation(() => fixture);
+      const valFix = {};
+      const right = P.right(valFix);
+
+      const exec = P.map(fn);
+
+      const result: P.Monad<any, {}> = exec(right);
+
+      expect(P.isRight(result)).toBe(true);
+      expect(P.getRight(result as P.Right<{}>)).toBe(fixture);
+      expect(fn).toHaveBeenCalledWith(valFix);
+    });
+    it('has aliases', () => {
+      expect(P.map).toBe(P.ifVal)
+    })
+  });
+
+  // describe('map function', () => {
+  //   it('should map a right', () => {
       
-      result.then(() => {
-        expect(result).resolves.toBe(5);
-        done();
-      });
-    });
-  });
 
-  describe('bind method', () => {
-    it('should bind on resolved promises', (done) => {
-      const result = createPromise(true, 5)
-        .bind((resVal: number) => Promise.resolve(resVal * 2));
+  //     result.then(() => {
+  //       expect(result).resolves.toBe(10);
+  //       done();
+  //     });
+  //   });
 
-      result.then(() => {
-        expect(result).resolves.toBe(10);
-        done();
-      });
-    });
-
-    it('should skip rejected promises', (done) => {
-      const result = createPromise(false, 5)
-        .bind((resVal: number) => Promise.resolve(resVal * 2));
+  //   it('should skip rejected promises', (done) => {
+  //     const result = createPromise(false, 5)
+  //       .map((resVal: number) => resVal * 2);
       
-      result.catch(() => {
-        expect(result).rejects.toBe(5);
-        done();
-      });
-    });
+  //     result.catch(() => {
+  //       expect(result).rejects.toBe(5);
+  //       done();
+  //     });
+  //   });
+  // });
 
-    it('should return rejected promise', (done) => {
-      const result = createPromise(true, 5)
-        .bind((resVal: number) => Promise.reject(resVal * 2));
+  // describe('rejMap method', () => {
+  //   it('should map on rejected promises', (done) => {
+  //     const result = createPromise(false, 5)
+  //       .rejMap((rejVal: number) => rejVal * 2);
 
-      result.catch(() => {
-        expect(result).rejects.toBe(10);
-        done();
-      });
-    });
-  });
+  //     result.catch(() => {
+  //       expect(result).rejects.toBe(10);
+  //       done();
+  //     })
+  //   });
 
-  describe('rej bind method', () => {
-    it('should bind on rejected promises', (done) => {
-      const result = createPromise(false, 5)
-        .rejFlatMap((resVal: number) => Promise.resolve(resVal * 2));
-
-      result.then(() => {
-        expect(result).resolves.toBe(10);
-        done();
-      });
-    });
-
-    it('should skip resolved promises', (done) => {
-      const result = createPromise(true, 5)
-        .rejFlatMap((resVal: number) => Promise.resolve(resVal * 2));
+  //   it('should skip resolved promises', (done) => {
+  //     const result = createPromise(true, 5)
+  //       .rejMap((rejVal: number) => rejVal * 2);
       
-      result.then(() => {
-        expect(result).resolves.toBe(5);
-        done();
-      });
-    });
+  //     result.then(() => {
+  //       expect(result).resolves.toBe(5);
+  //       done();
+  //     });
+  //   });
+  // });
 
-    it('should return rejected promise', (done) => {
-      const result = createPromise(false, 5)
-        .rejFlatMap((resVal: number) => Promise.reject(resVal * 2));
+  // describe('bind method', () => {
+  //   it('should bind on resolved promises', (done) => {
+  //     const result = createPromise(true, 5)
+  //       .bind((resVal: number) => Promise.resolve(resVal * 2));
 
-      result.catch(() => {
-        expect(result).rejects.toBe(10);
-        done();
-      });
-    });
-  });
+  //     result.then(() => {
+  //       expect(result).resolves.toBe(10);
+  //       done();
+  //     });
+  //   });
 
-  describe('cata method', () => {
-    it('should cata on resolved side', (done) => {
-      const result = createPromise(true, 5)
-        .cata(
-          (rejVal: number) => rejVal * 2,
-          (resVal: number) => resVal * 3,
-        );
+  //   it('should skip rejected promises', (done) => {
+  //     const result = createPromise(false, 5)
+  //       .bind((resVal: number) => Promise.resolve(resVal * 2));
+      
+  //     result.catch(() => {
+  //       expect(result).rejects.toBe(5);
+  //       done();
+  //     });
+  //   });
 
-      result.then(() => {
-        expect(result).resolves.toBe(15);
-        done();
-      });
-    });
+  //   it('should return rejected promise', (done) => {
+  //     const result = createPromise(true, 5)
+  //       .bind((resVal: number) => Promise.reject(resVal * 2));
 
-    it('should cata on rejected side', (done) => {
-      const result = createPromise(false, 5)
-        .cata(
-          (rejVal: number) => rejVal * 2,
-          (resVal: number) => resVal * 3,
-        );
+  //     result.catch(() => {
+  //       expect(result).rejects.toBe(10);
+  //       done();
+  //     });
+  //   });
+  // });
 
-      result.then(() => {
-        expect(result).resolves.toBe(10);
-        done();
-      });
-    });
-  });
+  // describe('rej bind method', () => {
+  //   it('should bind on rejected promises', (done) => {
+  //     const result = createPromise(false, 5)
+  //       .rejFlatMap((resVal: number) => Promise.resolve(resVal * 2));
 
-  describe('bimap method', () => {
-    it('should bimap on resolved side', (done) => {
-      const result = createPromise(true, 5)
-        .bimap(
-          (rejVal: number) => rejVal * 2,
-          (resVal: number) => resVal * 3,
-        );
+  //     result.then(() => {
+  //       expect(result).resolves.toBe(10);
+  //       done();
+  //     });
+  //   });
 
-      result.then(() => {
-        expect(result).resolves.toBe(15);
-        done();
-      });
-    });
+  //   it('should skip resolved promises', (done) => {
+  //     const result = createPromise(true, 5)
+  //       .rejFlatMap((resVal: number) => Promise.resolve(resVal * 2));
+      
+  //     result.then(() => {
+  //       expect(result).resolves.toBe(5);
+  //       done();
+  //     });
+  //   });
 
-    it('should bimap on rejected side', (done) => {
-      const result = createPromise(false, 5)
-        .bimap(
-          (rejVal: number) => rejVal * 2,
-          (resVal: number) => resVal * 3,
-        );
+  //   it('should return rejected promise', (done) => {
+  //     const result = createPromise(false, 5)
+  //       .rejFlatMap((resVal: number) => Promise.reject(resVal * 2));
 
-      result.catch(() => {
-        expect(result).rejects.toBe(10);
-        done();
-      });
-    });
-  });
+  //     result.catch(() => {
+  //       expect(result).rejects.toBe(10);
+  //       done();
+  //     });
+  //   });
+  // });
 
-  describe('recover method', () => {
-    it('should recover on rejected side', (done) => {
-      const result = createPromise(false, 5)
-        .recover((rj: number | any): number => typeof rj === 'number' ? rj * 2 : 0);
+  // describe('cata method', () => {
+  //   it('should cata on resolved side', (done) => {
+  //     const result = createPromise(true, 5)
+  //       .cata(
+  //         (rejVal: number) => rejVal * 2,
+  //         (resVal: number) => resVal * 3,
+  //       );
 
-      result.then(() => {
-        expect(result).resolves.toBe(10);
-        done();
-      });
-    });
+  //     result.then(() => {
+  //       expect(result).resolves.toBe(15);
+  //       done();
+  //     });
+  //   });
 
-    it('should pass over recover on rejesolved side', (done) => {
-      const result = createPromise(true, 5)
-        .recover((rj: number | any): number => typeof rj === 'number' ? rj * 2 : 0);
+  //   it('should cata on rejected side', (done) => {
+  //     const result = createPromise(false, 5)
+  //       .cata(
+  //         (rejVal: number) => rejVal * 2,
+  //         (resVal: number) => resVal * 3,
+  //       );
 
-      result.then(() => {
-        expect(result).resolves.toBe(5);
-        done();
-      });
-    });
-  });
+  //     result.then(() => {
+  //       expect(result).resolves.toBe(10);
+  //       done();
+  //     });
+  //   });
+  // });
 
-  describe('tap method', () => {
-    it('should call on resolved and return unaffected', (done) => {
-      const fn = jest.fn();
-      const result = createPromise(true, 5)
-        .tap(fn);
+  // describe('bimap method', () => {
+  //   it('should bimap on resolved side', (done) => {
+  //     const result = createPromise(true, 5)
+  //       .bimap(
+  //         (rejVal: number) => rejVal * 2,
+  //         (resVal: number) => resVal * 3,
+  //       );
 
-      result.then(() => {
-        expect(result).resolves.toBe(5);
-        expect(fn).toHaveBeenCalledWith(5);
-        done();
-      });
-    });
+  //     result.then(() => {
+  //       expect(result).resolves.toBe(15);
+  //       done();
+  //     });
+  //   });
 
-    it('should skip rejected and return unaffected', (done) => {
-      const fn = jest.fn();
-      const result = createPromise(false, 5)
-        .tap(fn);
+  //   it('should bimap on rejected side', (done) => {
+  //     const result = createPromise(false, 5)
+  //       .bimap(
+  //         (rejVal: number) => rejVal * 2,
+  //         (resVal: number) => resVal * 3,
+  //       );
 
-      result.catch(() => {
-        expect(result).rejects.toBe(5);
-        expect(fn).not.toHaveBeenCalled();
-        done();
-      });
-    });
-  });
+  //     result.catch(() => {
+  //       expect(result).rejects.toBe(10);
+  //       done();
+  //     });
+  //   });
+  // });
 
-  describe('doubleTap method', () => {
-    it('should call on resolved and return unaffected', (done) => {
-      const fn = jest.fn();
-      const result = createPromise(true, 5)
-        .doubleTap(fn);
+  // describe('recover method', () => {
+  //   it('should recover on rejected side', (done) => {
+  //     const result = createPromise(false, 5)
+  //       .recover((rj: number | any): number => typeof rj === 'number' ? rj * 2 : 0);
 
-      result.then(() => {
-        expect(result).resolves.toBe(5);
-        expect(fn).toHaveBeenCalledWith(null, 5, true);
-        done();
-      });
-    });
+  //     result.then(() => {
+  //       expect(result).resolves.toBe(10);
+  //       done();
+  //     });
+  //   });
 
-    it('should skip rejected and return unaffected', (done) => {
-      const fn = jest.fn();
-      const result = createPromise(false, 5)
-        .doubleTap(fn);
+  //   it('should pass over recover on rejesolved side', (done) => {
+  //     const result = createPromise(true, 5)
+  //       .recover((rj: number | any): number => typeof rj === 'number' ? rj * 2 : 0);
 
-      result.catch(() => {
-        expect(result).rejects.toBe(5);
-        expect(fn).toHaveBeenCalledWith(5, null, false);
-        done();
-      });
-    });
-  });
+  //     result.then(() => {
+  //       expect(result).resolves.toBe(5);
+  //       done();
+  //     });
+  //   });
+  // });
 
-  describe('fromFalsey factory', () => {
-    it('should create resolved promise on truthy', (done) => {
-      const result = Pronad.fromFalsey(5, 0);
+  // describe('tap method', () => {
+  //   it('should call on resolved and return unaffected', (done) => {
+  //     const fn = jest.fn();
+  //     const result = createPromise(true, 5)
+  //       .tap(fn);
 
-      result.then(() => {
-        expect(result).resolves.toBe(5);
-        done();
-      });
-    });
+  //     result.then(() => {
+  //       expect(result).resolves.toBe(5);
+  //       expect(fn).toHaveBeenCalledWith(5);
+  //       done();
+  //     });
+  //   });
 
-    it('should create rejected promise on false', (done) => {
-      const result = Pronad.fromFalsey(false, 0);
+  //   it('should skip rejected and return unaffected', (done) => {
+  //     const fn = jest.fn();
+  //     const result = createPromise(false, 5)
+  //       .tap(fn);
 
-      result.catch(() => {
-        expect(result).rejects.toBe(0);
-        done();
-      });
-    });
+  //     result.catch(() => {
+  //       expect(result).rejects.toBe(5);
+  //       expect(fn).not.toHaveBeenCalled();
+  //       done();
+  //     });
+  //   });
+  // });
 
-    it('should create rejected promise on null', (done) => {
-      const result = Pronad.fromFalsey(null, 0);
+  // describe('doubleTap method', () => {
+  //   it('should call on resolved and return unaffected', (done) => {
+  //     const fn = jest.fn();
+  //     const result = createPromise(true, 5)
+  //       .doubleTap(fn);
 
-      result.catch(() => {
-        expect(result).rejects.toBe(0);
-        done();
-      });
-    });
+  //     result.then(() => {
+  //       expect(result).resolves.toBe(5);
+  //       expect(fn).toHaveBeenCalledWith(null, 5, true);
+  //       done();
+  //     });
+  //   });
 
-    it('should create rejected promise on null', (done) => {
-      const result = Pronad.fromFalsey(undefined, 0);
+  //   it('should skip rejected and return unaffected', (done) => {
+  //     const fn = jest.fn();
+  //     const result = createPromise(false, 5)
+  //       .doubleTap(fn);
 
-      result.catch(() => {
-        expect(result).rejects.toBe(0);
-        done();
-      });
-    });
+  //     result.catch(() => {
+  //       expect(result).rejects.toBe(5);
+  //       expect(fn).toHaveBeenCalledWith(5, null, false);
+  //       done();
+  //     });
+  //   });
+  // });
 
-    it('should default to null', (done) => {
-      const result = Pronad.fromFalsey(undefined);
+  // describe('fromFalsey factory', () => {
+  //   it('should create resolved promise on truthy', (done) => {
+  //     const result = Pronad.fromFalsey(5, 0);
 
-      result.catch(() => {
-        expect(result).rejects.toBe(null);
-        done();
-      });
-    });
-  });
+  //     result.then(() => {
+  //       expect(result).resolves.toBe(5);
+  //       done();
+  //     });
+  //   });
 
-  describe('fromNull factory', () => {
-    it('should create resolved promise on truthy', (done) => {
-      const result = Pronad.fromNull(5, 0);
+  //   it('should create rejected promise on false', (done) => {
+  //     const result = Pronad.fromFalsey(false, 0);
 
-      result.then(() => {
-        expect(result).resolves.toBe(5);
-        done();
-      });
-    });
+  //     result.catch(() => {
+  //       expect(result).rejects.toBe(0);
+  //       done();
+  //     });
+  //   });
 
-    it('should create resolved promise on false', (done) => {
-      const result = Pronad.fromNull(false, 0);
+  //   it('should create rejected promise on null', (done) => {
+  //     const result = Pronad.fromFalsey(null, 0);
 
-      result.then(() => {
-        expect(result).resolves.toBe(false);
-        done();
-      });
-    });
+  //     result.catch(() => {
+  //       expect(result).rejects.toBe(0);
+  //       done();
+  //     });
+  //   });
 
-    it('should create rejected promise on null', (done) => {
-      const result = Pronad.fromNull(null, 0);
+  //   it('should create rejected promise on null', (done) => {
+  //     const result = Pronad.fromFalsey(undefined, 0);
 
-      result.catch(() => {
-        expect(result).rejects.toBe(0);
-        done();
-      });
-    });
+  //     result.catch(() => {
+  //       expect(result).rejects.toBe(0);
+  //       done();
+  //     });
+  //   });
 
-    it('should create rejected promise on null', (done) => {
-      const result = Pronad.fromNull(undefined, 0);
+  //   it('should default to null', (done) => {
+  //     const result = Pronad.fromFalsey(undefined);
 
-      result.catch(() => {
-        expect(result).rejects.toBe(0);
-        done();
-      });
-    });
+  //     result.catch(() => {
+  //       expect(result).rejects.toBe(null);
+  //       done();
+  //     });
+  //   });
+  // });
 
-    it('should default to null', (done) => {
-      const result = Pronad.fromNull(undefined);
+  // describe('fromNull factory', () => {
+  //   it('should create resolved promise on truthy', (done) => {
+  //     const result = Pronad.fromNull(5, 0);
 
-      result.catch(() => {
-        expect(result).rejects.toBe(null);
-        done();
-      });
-    });
-  });
+  //     result.then(() => {
+  //       expect(result).resolves.toBe(5);
+  //       done();
+  //     });
+  //   });
+
+  //   it('should create resolved promise on false', (done) => {
+  //     const result = Pronad.fromNull(false, 0);
+
+  //     result.then(() => {
+  //       expect(result).resolves.toBe(false);
+  //       done();
+  //     });
+  //   });
+
+  //   it('should create rejected promise on null', (done) => {
+  //     const result = Pronad.fromNull(null, 0);
+
+  //     result.catch(() => {
+  //       expect(result).rejects.toBe(0);
+  //       done();
+  //     });
+  //   });
+
+  //   it('should create rejected promise on null', (done) => {
+  //     const result = Pronad.fromNull(undefined, 0);
+
+  //     result.catch(() => {
+  //       expect(result).rejects.toBe(0);
+  //       done();
+  //     });
+  //   });
+
+  //   it('should default to null', (done) => {
+  //     const result = Pronad.fromNull(undefined);
+
+  //     result.catch(() => {
+  //       expect(result).rejects.toBe(null);
+  //       done();
+  //     });
+  //   });
+  // });
 });

@@ -1,10 +1,20 @@
-import { Pnd } from './Pnd';
-export { Pnd };
-interface PronadConstructor {
-    unit<T>(val: T): Pnd<never, T>;
-    fromFalsey<E, T>(val: T | undefined | null | false, ifFalsey?: E): Pnd<E, T>;
-    fromNull<E, T>(val: T | undefined | null, ifNull?: E): Pnd<E, T>;
-}
-export declare const Pronad: PronadConstructor;
-export declare const monadifyPromises: () => void;
+export declare type Left<E> = [false, E, undefined];
+export declare type Err<E> = Left<E>;
+export declare type Right<T> = [true, undefined, T];
+export declare type Val<E> = Right<E>;
+export declare type Monad<E, T> = Left<E> | Right<T>;
+export declare function right<T>(v: T): Right<T>;
+export declare const val: typeof right;
+export declare function isRight<E, T>(m: Monad<E, T>): m is Right<T>;
+export declare const isVal: typeof isRight;
+export declare const getRight: <T>(r: [true, undefined, T]) => T;
+export declare function left<E>(e: E): Left<E>;
+export declare const err: typeof left;
+export declare function isLeft<E, T>(m: Monad<E, T>): m is Left<E>;
+export declare const isErr: typeof isLeft;
+export declare const getLeft: <E>(l: [false, E, undefined]) => E;
+export declare function flatMap<E, T, R>(fn: (v: T) => Monad<E, R>, m: Monad<E, T>): Monad<E, R>;
+export declare function flatMapOf<E, T, R>(fn: (v: T) => Monad<E, R>): (m: Monad<E, T>) => Monad<E, R>;
+export declare function map<E, T, R>(fn: (v: T) => R, m: Monad<E, T>): Monad<E, R>;
+export declare function mapOf<E, T, R>(fn: (v: T) => R): (m: Monad<E, T>) => Monad<E, R>;
 //# sourceMappingURL=index.d.ts.map
