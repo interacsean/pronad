@@ -6,7 +6,7 @@
 import { Pronad, PND_LEFT, PND_RIGHT, PronadInner, PND_ID } from './Pronad';
       // omg this doesn't deal with map((): Promise<T>) or does it?
 
-export { Pronad, PND_LEFT, PND_RIGHT };
+export { Pronad, PND_LEFT, PND_RIGHT, PND_ID };
 
 const isFunction = (mbFn: any): mbFn is Function  => typeof mbFn === 'function';
 
@@ -15,7 +15,7 @@ const isObject = (mbObj: any): mbObj is Object => typeof mbObj === 'object' && m
 const isThennable = (mbProm: any): mbProm is { then: Function } =>
   isObject(mbProm) && mbProm.then !== undefined && typeof mbProm.then === 'function';
 
-const isPronad = <E, T>(mbPronad: any): mbPronad is Pronad<E, T> =>
+export const isPronad = <E, T>(mbPronad: any): mbPronad is Pronad<E, T> =>
   isObject(mbPronad) && mbPronad._pndId === PND_ID && (mbPronad.state === PND_LEFT || mbPronad.state === PND_RIGHT);
 
 interface PronadConstructor {

@@ -126,6 +126,7 @@ There's still more exploring to do around how solid the rejected side of the `Pr
 ****
 
 #### Todo
+ - fromPromise - consider reformatting to expect it to already be errorCaught
  - Update readme
  - Consider how to provide pure version as well as wrapped
  - Check where types are failing on usage with containing null
