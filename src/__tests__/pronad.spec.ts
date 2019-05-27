@@ -1,4 +1,5 @@
-import { monadifyPromises, Pronad } from '../index';
+import { monadifyPromises } from '../index';
+import '../ambient/index.d.ts';
 
 monadifyPromises();
 
@@ -249,7 +250,7 @@ describe('pronad', () => {
 
   describe('fromFalsey factory', () => {
     it('should create resolved promise on truthy', (done) => {
-      const result = Pronad.fromFalsey(5, 0);
+      const result = Promise.fromFalsey(5, 0);
 
       result.then(() => {
         expect(result).resolves.toBe(5);
@@ -258,7 +259,7 @@ describe('pronad', () => {
     });
 
     it('should create rejected promise on false', (done) => {
-      const result = Pronad.fromFalsey(false, 0);
+      const result = Promise.fromFalsey(false, 0);
 
       result.catch(() => {
         expect(result).rejects.toBe(0);
@@ -267,7 +268,7 @@ describe('pronad', () => {
     });
 
     it('should create rejected promise on null', (done) => {
-      const result = Pronad.fromFalsey(null, 0);
+      const result = Promise.fromFalsey(null, 0);
 
       result.catch(() => {
         expect(result).rejects.toBe(0);
@@ -276,7 +277,7 @@ describe('pronad', () => {
     });
 
     it('should create rejected promise on null', (done) => {
-      const result = Pronad.fromFalsey(undefined, 0);
+      const result = Promise.fromFalsey(undefined, 0);
 
       result.catch(() => {
         expect(result).rejects.toBe(0);
@@ -285,7 +286,7 @@ describe('pronad', () => {
     });
 
     it('should default to null', (done) => {
-      const result = Pronad.fromFalsey(undefined);
+      const result = Promise.fromFalsey(undefined);
 
       result.catch(() => {
         expect(result).rejects.toBe(null);
@@ -296,7 +297,7 @@ describe('pronad', () => {
 
   describe('fromNull factory', () => {
     it('should create resolved promise on truthy', (done) => {
-      const result = Pronad.fromNull(5, 0);
+      const result = Promise.fromNull(5, 0);
 
       result.then(() => {
         expect(result).resolves.toBe(5);
@@ -305,7 +306,7 @@ describe('pronad', () => {
     });
 
     it('should create resolved promise on false', (done) => {
-      const result = Pronad.fromNull(false, 0);
+      const result = Promise.fromNull(false, 0);
 
       result.then(() => {
         expect(result).resolves.toBe(false);
@@ -314,7 +315,7 @@ describe('pronad', () => {
     });
 
     it('should create rejected promise on null', (done) => {
-      const result = Pronad.fromNull(null, 0);
+      const result = Promise.fromNull(null, 0);
 
       result.catch(() => {
         expect(result).rejects.toBe(0);
@@ -323,7 +324,7 @@ describe('pronad', () => {
     });
 
     it('should create rejected promise on null', (done) => {
-      const result = Pronad.fromNull(undefined, 0);
+      const result = Promise.fromNull(undefined, 0);
 
       result.catch(() => {
         expect(result).rejects.toBe(0);
@@ -332,7 +333,7 @@ describe('pronad', () => {
     });
 
     it('should default to null', (done) => {
-      const result = Pronad.fromNull(undefined);
+      const result = Promise.fromNull(undefined);
 
       result.catch(() => {
         expect(result).rejects.toBe(null);
