@@ -1,3 +1,89 @@
+# Monax
+
+Monax is a suite of functions to help control logic flow.
+ 
+ - Compatible within promise chains
+ - Retains type information for error states
+ - Improved features (as per Fluture)
+ - Simplified terminology (not so much with Fluture)
+
+It is a also a simplified monad library, but you don't really need to know what
+a monad is or how to use one in order to use Monax; we've tried to translate the
+traditional mathematical terms to an intuitive interface for easy onboarding.
+
+## Installing
+
+`npm i monax-js`
+
+## Using
+
+Monax is most useful in typescript, where throwing and catching results in Promises is
+[unprecise type by design](https://github.com/Microsoft/TypeScript/issues/6283#issuecomment-167851788) 
+
+**Simple but fairly useless example:**
+```
+// You can import individual functions and types:
+import { Monad } from 'monaxjs';
+// or import all using the * pattern:
+import * as Mx from 'monaxjs'
+
+function createMonax(x: boolean): Monad<number, string> {
+    // Create a Monax that is either an error that is a number, or a  value that is a string
+    const myMonax: Monad<number, string> = x ? Mx.val('foo') : Mx.err(404);
+    
+    // If it is a value, perform the following function on the value
+    return Mx.withVal((val: string): string => `${val}-bar`, myMonax);
+}
+
+/**
+ * createMonax(): Monad<number, string> returns a data container that can hold 
+ * either the string value or a numeric error, and also carries the state
+ * of the data (val or err).
+ */  
+```
+
+*Why is this useful*? 
+
+Previously, errors were generally thrown, making it difficult to recover within the same scope
+ (or returned dogily as `false` / `null`).
+
+If the caller of a function that could throw did not call that function within a `try`,
+the error may be caught further upstream which may be undesirable.  
+
+Simply put, the program flow could not be easily known, nor could it be annotated or
+determined by the type signatures.
+
+**A more practical example**
+
+```
+// 
+
+```
+
+
+## Monad aliases
+
+Monax has monad aliases for all functions:
+
+```
+// Monad constructors
+right == val
+left == err 
+
+// Functors
+map == withVal
+flatMap == ifVal
+
+
+// Utilities
+isRight == isVal 
+isLeft == isErr
+getRight == getVal
+getLeft == getErr
+```
+
+error states and  
+
  - Promises must have all the methods, so that async fns can be .mapped
  - chain methods must result in a Pronad so we can track the rejected type
  - :. Pronad must be ambient type so that Promise knows about it
