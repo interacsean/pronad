@@ -5,11 +5,12 @@
  *  - errMap / ifErr
  *  - fromPromise
  *  - compat with left() [option]
- *  - flow – class that aliases all functions to
+ *  - chain – class that aliases all functions to
  *  - include config option to change mode from L/R to E | {}
- *  - cata
- *  - recover
- *  - tests for fromNull/fromFalsey
+ *  - fork (like cata but must returns void)
+ *  - cata / recover (takes (fn: (err: E) => R) and unwraps the val)
+ *     - the function for a val would be optional - if omitted, is `id`
+ *     - this may make overloads complex as 2nd arg could be function or monax
  *  - test for getLeft
  *  - + tap/dblTap
  */
@@ -87,7 +88,7 @@ function flatMap<E, T, R>(this: any, fn: ((v: T) => Monax<E, R>) | ((v: T) => Pr
 export { flatMap }
 
 export const ifVal = flatMap;
-
+export const bind = flatMap;
 
 // is this just flatMap curried
 // export function flatMapOf<E, T, R>(

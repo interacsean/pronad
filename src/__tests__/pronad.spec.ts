@@ -233,7 +233,8 @@ describe('monax', () => {
 
     });
     it('has aliases', () => {
-      // expect(Mx.awaitFlatMap).toBe(Mx.flatMap)
+      expect(Mx.bind).toBe(Mx.flatMap)
+      expect(Mx.ifVal).toBe(Mx.flatMap)
     })
   });
 

@@ -2,68 +2,215 @@
 
 Monax is a suite of functions to help control logic flow.
  
- - Compatible within promise chains
+ - Designed to be compatible in promise chains!
  - Retains type information for error states
- - Improved features (as per Fluture)
- - Simplified terminology (not so much with Fluture)
+ - Improved flow-control over promises (as per Fluture library)
+ - Simplified terminology available (not so much with Fluture)
 
 It is a also a simplified monad library, but you don't really need to know what
-a monad is or how to use one in order to use Monax; we've tried to translate the
-traditional mathematical terms to an intuitive interface for easy onboarding.
+a monad is or how to use one in order to use Monax; we've translated the
+traditional mathemathical terms to an intuitive interface for easy onboarding.
 
 ## Installing
 
 `npm i monax-js`
 
-## Using
+## Guide on use
 
-Monax is most useful in typescript, where throwing and catching results in Promises is
-[unprecise type by design](https://github.com/Microsoft/TypeScript/issues/6283#issuecomment-167851788) 
+
+Monax is most useful in typescript, where throwing and catching exceptions in Promises is
+[imprecise by design](https://github.com/Microsoft/TypeScript/issues/6283#issuecomment-167851788) 
+
+### Using functionally:
+
+All features are exported as standalone functions.  This becomes more useful in promise chains
+(see further below) but is shown here as a starting point:
 
 **Simple but fairly useless example:**
 ```
 // You can import individual functions and types:
-import { Monad } from 'monaxjs';
+import { Monad, val, err, withVal } from 'monax-js';
 // or import all using the * pattern:
-import * as Mx from 'monaxjs'
-
-function createMonax(x: boolean): Monad<number, string> {
-    // Create a Monax that is either an error that is a number, or a  value that is a string
-    const myMonax: Monad<number, string> = x ? Mx.val('foo') : Mx.err(404);
-    
-    // If it is a value, perform the following function on the value
-    return Mx.withVal((val: string): string => `${val}-bar`, myMonax);
-}
+import * as Mx from 'monax-js'
 
 /**
- * createMonax(): Monad<number, string> returns a data container that can hold 
- * either the string value or a numeric error, and also carries the state
- * of the data (val or err).
- */  
+ * `selectFoo(userId: number | undefined): Monad<number, string>` returns a data container that
+ * can hold  the string value or a numeric error, and also holds the state of the
+ * data (either val or err).
+ */
+
+// mock permissioning
+const validUserIds = [1, 2, 3, 5, 8];
+
+function selectFoo(userId: number | undefined): Monad<number, string> {
+    // Create a Monax that is either an error of type number, or a value of type string
+    const fooMonax: Monad<number, string> = (userId !== undefined && validUserIds.includes(userId))
+      ? Mx.val('foo')
+      : Mx.err(403);
+    
+    // If it is a value, perform the following transformation function on the value
+    return Mx.withVal((val: string): string => `You selected a ${val}`, fooMonax);
+}
+
 ```
 
 *Why is this useful*? 
 
-Previously, errors were generally thrown, making it difficult to recover within the same scope
- (or returned dogily as `false` / `null`).
+In tradiational javascript, errors are generally thrown within a function, making it annoying to
+recover within the same function scope, and impossible to annotate your function to ensure that
+a consumer appropriately handles the error.
 
-If the caller of a function that could throw did not call that function within a `try`,
-the error may be caught further upstream which may be undesirable.  
+If the caller of a function did not wrap the call in a `try`/`catch`,
+the error may be caught further upstream, or not at all, which may be undesirable.  Additionally
+caught errors are of unknown or coerced type.
 
 Simply put, the program flow could not be easily known, nor could it be annotated or
 determined by the type signatures.
 
+Returning a container (a monad – our monax) solves this problem of multiple return types.
+
 **A more practical example**
 
+_(This example is in an Express app context but should be simple to follow even if you are not familiar with Express)_
+
 ```
-// 
+import { Request } from 'express';
+import { selectFoo } from 'the/above/example.ts';
+import { Monax }, * as Mx from 'monax-js';
+
+function checkout(req: Request) {
+  // someAuthService doesn't use Monax (we can fix that later)
+  const userId: number | undefined = someAuthService.currentUser();
+  const selected: Monax<number, string> = selectFoo(userId);
+
+  // this is unnecessary; will see a better way shortly:
+  const selectedWithDesc = Mx.withVal(
+    (val: string): string => `Thank you for your order, ${val}`,
+  );
+
+  Mx.fork(
+    // function to run if err
+    (err: number) => {
+      req.status(err);
+      req.send('There was an error processing your order');
+    },
+    // function to run if val
+    (val: string) => {
+      req.send(val);
+    },
+    // (the data to evaluate)
+    selectedWithDesc,
+  )
+}
 
 ```
 
+### Chaining
+
+[to be implemented!]
+
+To chain multiple transformations together, use the utility function `chain`.
+
+(This initalisesa class that contains method aliases for the monax functions.)
+
+```
+/**
+ * Let's rewrite the checkout route function
+ */
+
+function checkout(req: Request) {
+  const userId: number | undefined = someAuthService.currentUser();
+
+  // if userId is undefined, fromFalsey will result in an err of number 403
+  Mx.chain(Mx.fromFalsey(userId, 403)) // current type of the chained monax: Monax<number, number> - userId or 403
+    // pass the userId to selectFoo and use the result
+    .ifVal(selectFoo) // current type: Monax<string, number> - 'foo' or 403
+    // transform the val
+    .withVal((val: string): string => `Thank you for your order, ${val}`)
+    // respond accordingly
+    .fork(
+      (err: number) => {
+        req.status(err);
+        req.send('There was an error processing your order');
+      },
+      (val: string) => {
+        req.send(val);
+      },
+    );
+}
+```
+
+Note, `ifVal` is used with functions that return a Monax and can switch to the 'err' state (aliases `flatMap`, `bind`)
+
+whereas `withVal` is used to apply transformations to the value only, and cannot switch to 'err' state (alias `map`)
+
+### Using monax in a promise chain
+
+[WIP to be tested, should work for implemented functions]
+
+This is where Monax separates itself from other monad libraries...
+
+All functions are curried*, which is perfect for use within a promise chain of `.then`s
+
+_*'Curried' means you can pass a single argument, and you get another function which takes the remaineder of the arguments_
+
+```
+/**
+ * In a real usecase, services/functions like someAuthService.currentUser and selectFoo often return Promises.
+ *
+ * Let's assume they have been fully implemented as such:
+ */
+function someAuthService_currentUser(): Promise<number | undefined> { /*...*/ }
+function selectFoo(userId: number): Promise<Monax<string, number>> { /*...*/ }
+
+//* Our checkout function would now run like this:
+
+function checkout(req: Request) {
+  someAuthService_currentUser()
+    .then(uid => Mx.fromFalsey(uid, 403)) // dev note, should the params be reversed?
+    .then(ifVal(selectFoo))
+    .then(withVal((val: string): string => `Thank you for your order, ${val}`))
+    .then(fork(
+      (err: number) => {
+        req.status(err);
+        req.send('There was an error processing your order');
+      },
+      (val: string) => {
+        req.send(val);
+      },
+    ))
+    // The `.catch` should now only have to deal with completely unexpected errors
+    .catch((e: any) => {
+      req.status(400);
+      req.send('There was an unexpected error');
+    });
+}
+```
+
+### A note on withVal / map and functions that return promises
+
+// todo: write better
+
+use withAwaitedVal / awaitMap to get:
+
+`Promise<Monax<any, YourResponse>>`
+
+rather than:
+
+`Monax<any, Promise<YourResponse>>`
+
+## Recommended approach for higher level architecture when using Monax
+
+- Don't throw errors or reject promises (you will lose type annotation in typescript).  Instead, return / resolve with a Mx.err(yourError).
+- Use the `Error` object for your `err` states.  You get a lot of meta data which is also extendable
+- Do use Promise chains with the curried monax functions (higher order functions) to control the logic flow
+- Don't go overboard with point-free programming or obsess with immediately returning fat-arrow functions.  If it's clearer to write out the function and define a few consts that are technically unnecessary but add context, that is ultimately more important.
+- ***Leave obsesive optimisation code for compilers/transpilers***
+- Do: remember to `.catch` for unexpected exceptions
 
 ## Monad aliases
 
-Monax has monad aliases for all functions:
+Monax has traditional monad-like aliases for all functions:
 
 ```
 // Monad constructors
@@ -72,153 +219,17 @@ left == err
 
 // Functors
 map == withVal
-flatMap == ifVal
-
+flatMap == bind == ifVal
+// leftMap == errMap == withErr
+// leftFlatMap == leftBind == errFlatMap == errBind == ifErr
+// cata == recover
 
 // Utilities
 isRight == isVal 
 isLeft == isErr
+
+// dev note: consider removing getRight and getLeft
 getRight == getVal
 getLeft == getErr
+//tap == peek
 ```
-
-error states and  
-
- - Promises must have all the methods, so that async fns can be .mapped
- - chain methods must result in a Pronad so we can track the rejected type
- - :. Pronad must be ambient type so that Promise knows about it
- - Pronad definition should inherit Promise prototype to maintain consency
-
-
- - How bout Promise<T>.bind => Promise<Pnd<E, T>>.  recover works on resolved promise of Promise<{ left: true, value: T }>, and catch still catches errors
- - in fact why doesn't recover take ((l: E) => T, (err: any) => T)
-
-This module:
-
-- Extends the native Promise prototype to include monad methods and TypeScript typings.
-- Provides a `Pronad<Rej, Res>` TypeScript type to annotate the rejected state of a promise
-
-It was built to ease frustrations while trying to bridge the gap when working with native Promises which lacked features and structure around types, and arbitrary monad libraries which lacked async abilities.
-
-(I recommend checking out the Fluture library as another more advanced alternative.)
-
-## How to use
-
-An example...
-
-```
-/*** Some function that returns a Promise ***/
-function playTheGame(): Pronad<boolean, boolean> { 
-  return Math.random() > 0.5
-    ? Promise.resolve(true)
-    : Promise.reject(false);
-}
-
-/*** Another function that returns a Promise ***/
-function validateWinner(resVal: string): Pronad<Error, string> {
-  return Math.random() > 0.5
-    ? Promise.resolve(resVal)
-    : Promise.reject(new Error('cheating involved');
-}
-
-const competitionResult: Pronad<Error, string> = playTheGame
-  .bimap(
-    // only runs on rejected
-    (rejVal: boolean): Error => new Error('You lost the game'),
-    // only runs on resolved
-    (resVal: boolean): string => 'Congratulations you won'
-  )
-  // only runs on resolved, and should return concrete value or resolved promise
-  .map(someAddPlayerScoreToStringFn)
-  // `validateWinner` only runs on resolved, and returns another Promise / Pronad
-  .flatMap(validateWinner);
-  // You could keep chaining here instead of assigning to a const
-
-const forRender: string = await competitionResult
-  // simply switches the rejected value to same type as resolved so it can be safely awaited
-  .recover((rejVal: Error | any): string => typeof rejVal === 'Error'
-    ? `Unfortunately you lost: ${rejVal.message}`
-    : 'Unfortunately you did not win, but we can\'t tell you why')
-```
-
-The `Pronad` type is interchangable with Promises, they only offer the extra generic slot for notation of the type of the Promise's rejected value*. 
-
-### Promise method equivalency
-
-Without delving into monad thoery, here's a cheat-sheet on the methods available:
-
-**.map -> .then** – for functions which return a concrete value, or intend to return a resolved promise.
-
-**.flatMap -> .then** – for functions which return a Promise (resolved or rejected).
-
-**.rejMap -> .catch** – transform your rejected value; the return will automatically be `Promise.reject()`ed.
-
-**.rejFlatMap -> .catch** – for functions which return a Promise (resolved or rejected), but is only to be run on rejected state, with the rejected value.
-
-**.cata(rejFn, resFn) -> .then(resFn, rejFn)** – to resolve to a standardised type for final consumption by the application
-
-**.recover -> .catch** also serves this purpose, but only runs for rejected state and must return a value the same type as that of the resolved state.
-
-## Installation
-
-**Install the dependency:**
-
-`npm i pronad`
-
-
-**Call the initialiser**
-
-Somewhere in your bootstrapping code, include:
-
-```
-import { monadifyPromises } from 'pronad';
-
-monadifyPromises();
-```
-(We'd wanted to keep mutating native prototypes as an opt-in situation :D)
-
-
-**For TypeScript projects:**
-
-Wherever you declare your types, create a file:
-
-```
-// pronad.d.ts
-
-import 'pronad/src/ambient';
-
-```
-(or include in your existing type bootstrap)
-
-This adds the monadic methods to the Promise interface.
-
-## Caveats / notes on usage
-
-Underlying this library are the inherantly problematic javascript Promises.
-
-**`.catch` catches all errors**
-
-Any function used to operate on the rejected side of the promise is evaluated with `.catch` behind the scenes.  This function inherantly must accept an `any`, since any errors that are thrown (willingly or otherwise) will end up in this block.
-
-Functions used in `rejMap`, `rejFlatMap`, `cata` which deal with the rejected state are annotated with `rejFn: (E | any) => ...` (which of course, is simply `any`); the `E` is given as a indicative only.
-
-**You can't wrap Promises**
-
-Promises flatten by design.  If you try to form a `Pronad<E, Pronad<F, T>>`, it will flatten to `Pronad<F, T>`.
-
-**Voiding the type contract**
-
-If a function throws, or you return a `Promise.reject()` from a `.map`, your Pronad will end up in the rejected state, even though the `.map` by definition should retain the state of the monad.
-
-There's still more exploring to do around how solid the rejected side of the `Pronad` type is.
-
-*Them's the breaks*
-
-****
-
-#### Todo
- - Experiment with alternative rej typing in the Pronad<E,T>
- - Explore whether recover fn can be optional / default to identity and still error if type is not maintained
- - Write documentation on each method
- - Alternative to Promise.all to convert `Array<Pronad<bad, good>>` and collect all values into a `Pronad<Array<bad>, Array<good>>`.
- - Provide an alternative import file to auto-initialise(?)
