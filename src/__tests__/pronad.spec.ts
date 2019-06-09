@@ -23,8 +23,8 @@ describe('monax', () => {
       expect(Mx.isRight(result)).toBe(true);
     });
     it('has aliases', () => {
-      expect(Mx.right).toBe(Mx.val);
-      expect(Mx.isRight).toBe(Mx.isVal);
+      expect(Mx.val).toBe(Mx.right);
+      expect(Mx.isVal).toBe(Mx.isRight);
     });
   });
 
@@ -42,8 +42,8 @@ describe('monax', () => {
       expect(Mx.isLeft(result)).toBe(true);
     });
     it('has aliases', () => {
-      expect(Mx.left).toBe(Mx.err);
-      expect(Mx.isLeft).toBe(Mx.isErr);
+      expect(Mx.err).toBe(Mx.left);
+      expect(Mx.isErr).toBe(Mx.isLeft);
     });
   });
 
@@ -120,9 +120,9 @@ describe('monax', () => {
     it('should skip a Left', () => {
       const fn = jest.fn().mockImplementation(() => fixture);
       const valFix = {};
-      const right = Mx.left(valFix);
+      const left = Mx.left(valFix);
 
-      const result: Mx.Monax<any, {}> = Mx.map(fn, right);
+      const result: Mx.Monax<any, {}> = Mx.map(fn, left);
 
       expect(Mx.isRight(result)).toBe(false);
       expect(Mx.getRight(result as Mx.Right<{}>)).toBeUndefined();
@@ -142,7 +142,7 @@ describe('monax', () => {
       expect(fn).toHaveBeenCalledWith(valFix);
     });
     it('has aliases', () => {
-      expect(Mx.map).toBe(Mx.withVal)
+      expect(Mx.withVal).toBe(Mx.map)
     })
   });
 
@@ -161,7 +161,74 @@ describe('monax', () => {
         expect(fn).toHaveBeenCalledWith(valFix);
         done()
       });
+    });
+    it('has aliases', () => {
+      // expect(Mx.map).toBe(Mx.awaitMap);
+      expect(Mx.withAwaitedVal).toBe(Mx.awaitMap);
+    })
+  });
 
+  describe('leftMap', () => {
+    it('should leftMap a Left', () => {
+      const fn: (v: any) => any = jest.fn().mockImplementation(() => fixture);
+      const valFix = {}
+      const left = Mx.left(valFix);
+
+      const result: Mx.Monax<{}, any> = Mx.leftMap(fn, left);
+
+      expect(Mx.isLeft(result)).toBe(true);
+      expect(Mx.getLeft(result as Mx.Left<{}>)).toBe(fixture);
+      expect(fn).toHaveBeenCalledWith(valFix);
+    });
+    it('should skip a Right', () => {
+      const fn = jest.fn().mockImplementation(() => fixture);
+      const valFix = {};
+      const right = Mx.right(valFix);
+
+      const result: Mx.Monax<{}, any> = Mx.leftMap(fn, right);
+
+      expect(Mx.isLeft(result)).toBe(false);
+      expect(Mx.getLeft(result as Mx.Left<{}>)).toBeUndefined();
+      expect(fn).not.toHaveBeenCalled();
+    });
+    it('should be curried', () => {
+      const fn: (v: any) => any = jest.fn().mockImplementation(() => fixture);
+      const valFix = {};
+      const left = Mx.left(valFix);
+
+      const exec = Mx.leftMap(fn);
+
+      const result: Mx.Monax<{}, any> = exec(left);
+
+      expect(Mx.isLeft(result)).toBe(true);
+      expect(Mx.getLeft(result as Mx.Left<{}>)).toBe(fixture);
+      expect(fn).toHaveBeenCalledWith(valFix);
+    });
+    it('has aliases', () => {
+      expect(Mx.errMap).toBe(Mx.leftMap)
+      expect(Mx.withErr).toBe(Mx.leftMap)
+    });
+  });
+
+  describe('awaitLeftMap', () => {
+    it('should wait for promises value', (done) => {
+      const fn: (v: any) => any = jest.fn().mockImplementation(() => Promise.resolve(fixture));
+      const valFix = {};
+      const left = Mx.left(valFix);
+
+      const exec = Mx.awaitLeftMap(fn);
+      const prom: Promise<Mx.Monax<{}, any>> = exec(left);
+
+      prom.then((result: Mx.Monax<{}, any>) => {
+        expect(Mx.isLeft(result)).toBe(true);
+        expect(Mx.getLeft(result as Mx.Left<{}>)).toBe(fixture);
+        expect(fn).toHaveBeenCalledWith(valFix);
+        done()
+      });
+    });
+    it('has aliases', () => {
+      expect(Mx.withAwaitedErr).toBe(Mx.awaitLeftMap)
+      expect(Mx.awaitErrMap).toBe(Mx.awaitLeftMap)
     });
   });
 

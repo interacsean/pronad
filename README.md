@@ -107,7 +107,7 @@ function checkout(req: Request) {
 
 ### Chaining
 
-[to be implemented!]
+**/!\ Warning: yet to be implemented!**
 
 To chain multiple transformations together, use the utility function `chain`.
 
@@ -152,7 +152,7 @@ This is where Monax separates itself from other monad libraries...
 
 All functions are curried*, which is perfect for use within a promise chain of `.then`s
 
-_*'Curried' means you can pass a single argument, and you get another function which takes the remaineder of the arguments_
+_*'Curried' means you can pass a single argument, and you get another function which takes the remainder of the arguments_
 
 ```
 /**
@@ -167,7 +167,7 @@ function selectFoo(userId: number): Promise<Monax<string, number>> { /*...*/ }
 
 function checkout(req: Request) {
   someAuthService_currentUser()
-    .then(uid => Mx.fromFalsey(uid, 403)) // dev note, should the params be reversed?
+    .then(uid => Mx.fromFalsey(uid, 403)) // dev note, should the params be reversed for point-free?
     .then(ifVal(selectFoo))
     .then(withVal((val: string): string => `Thank you for your order, ${val}`))
     .then(fork(
@@ -212,19 +212,28 @@ rather than:
 
 Monax has traditional monad-like aliases for all functions:
 
+**Monad constructors**
 ```
-// Monad constructors
 right == val
-left == err 
+left == err
+// fromPromise (no aliases)
+fromNull (no aliases)
+fromFalsey (no aliases)
+```
 
-// Functors
+**Monad transformation functions**
+```
 map == withVal
+awaitMap == withAwaitedVal
 flatMap == bind == ifVal
-// leftMap == errMap == withErr
+leftMap == errMap == withErr
+awaitLeftMap == awaitErrMap == withAwaitedErr
 // leftFlatMap == leftBind == errFlatMap == errBind == ifErr
 // cata == recover
+```
 
-// Utilities
+**Utilities**
+```
 isRight == isVal 
 isLeft == isErr
 
@@ -233,3 +242,7 @@ getRight == getVal
 getLeft == getErr
 //tap == peek
 ```
+
+## Reflections / roadmap
+
+- Should the map function automatically await promises (i.e. should map's implementation be awaitMap?)

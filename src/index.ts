@@ -1,7 +1,6 @@
 /**
  * todo:
  *  - Update README propers
- *  - + test for flatMap
  *  - errMap / ifErr
  *  - fromPromise
  *  - compat with left() [option]
@@ -24,6 +23,10 @@ export type Left<E> = Err<E>;
 export type Val<T> = [true, undefined, T];
 export type Right<E> = Val<E>;
 export type Monax<E, T> = Err<E> | Val<T>
+
+/*************************
+ *** Monax constructors **
+ ************************/
 
 export function right<T>(v: T): Val<T> {
   return [true, undefined, v];
@@ -63,6 +66,11 @@ export function fromNull<E, T>(val: T | undefined | null, ifNully: E): Monax<E, 
     : left(ifNully);
 }
 
+
+/**************************************
+ *** Monax transformation functions  **
+ *************************************/
+
 /**
  * FlatMap
  *
@@ -89,14 +97,6 @@ export { flatMap }
 
 export const ifVal = flatMap;
 export const bind = flatMap;
-
-// is this just flatMap curried
-// export function flatMapOf<E, T, R>(
-//   fn: (v: T) => Monax<E, R>
-// ): (m: Monax<E, T>) => Monax<E, R> {
-//   return (m: Monax<E, T>) => flatMap(fn, m);
-// }
-
 
 /**
  * Map
@@ -142,6 +142,53 @@ function awaitMap<E, T, R>(this: any, fn: ((v: T) => Promise<R>), m?: Monax<E, T
 export { awaitMap };
 
 export const withAwaitedVal = awaitMap;
+
+/**
+ * LeftMap
+ *
+ * @param fn Function to map if a Left/Err
+ * @param m Monad to evaluate for execution
+ * @return Monad
+ */
+
+function _leftMap<E, T, F>(fn: (v: E) => F, m: Monax<E, T>): Monax<F, T> {
+  return isLeft(m) ? left(fn(m[1])) : m as Monax<F, T>;
+}
+
+function leftMap<E, T, F>(fn: ((v: E) => F), m: Monax<E, T>): Monax<F, T>;
+function leftMap<E, T, F>(fn: ((v: E) => F)): ((m: Monax<E, T>) => Monax<F, T>);
+function leftMap<E, T, F>(this: any, fn: ((v: E) => F), m?: Monax<E, T>) {
+  return curry(_leftMap).apply(this, arguments);
+}
+
+export { leftMap };
+
+export const withErr = leftMap;
+export const errMap = leftMap;
+
+/**
+ * AwaitLeftMap
+ * @param fn Promise-returning-function to map if a Right/Val
+ * @param m  Monad to evaluate for execution
+ * @return Promise<Monad>
+ */
+
+function _awaitLeftMap<E, T, F>(fn: (v: E) => Promise<F>, m: Monax<E, T>): Promise<Monax<F, T>> {
+  return isLeft(m)
+    ? fn(m[1]).then(left)
+    : Promise.resolve(m) as Promise<Monax<F, T>>;
+}
+
+function awaitLeftMap<E, T, F>(fn: ((v: E) => Promise<F>), m: Monax<E, T>): Promise<Monax<F, T>>;
+function awaitLeftMap<E, T, F>(fn: ((v: E) => Promise<F>)): ((m: Monax<E, T>) => Promise<Monax<F, T>>);
+function awaitLeftMap<E, T, F>(this: any, fn: ((v: E) => Promise<F>), m?: Monax<E, T>) {
+  return curry(_awaitLeftMap).apply(this, arguments);
+}
+
+export { awaitLeftMap };
+
+export const withAwaitedErr = awaitLeftMap;
+export const awaitErrMap = awaitLeftMap;
 
 
 // interface PronadConstructor {
