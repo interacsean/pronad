@@ -228,7 +228,7 @@ awaitMap == withAwaitedVal
 flatMap == bind == ifVal
 leftMap == errMap == withErr
 awaitLeftMap == awaitErrMap == withAwaitedErr
-// leftFlatMap == leftBind == errFlatMap == errBind == ifErr
+leftFlatMap == leftBind == errFlatMap == errBind == ifErr
 // cata == recover
 ```
 

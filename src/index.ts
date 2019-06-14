@@ -1,9 +1,8 @@
 /**
  * todo:
  *  - Update README propers
- *  - errMap / ifErr
  *  - fromPromise
- *  - compat with left() [option]
+ *  - compat with left(undefined) [option]
  *  - chain – class that aliases all functions to
  *  - include config option to change mode from L/R to E | {}
  *  - fork (like cata but must returns void)
@@ -142,6 +141,34 @@ function awaitMap<E, T, R>(this: any, fn: ((v: T) => Promise<R>), m?: Monax<E, T
 export { awaitMap };
 
 export const withAwaitedVal = awaitMap;
+
+/**
+ * LeftFlatMap
+ *
+ * @param fn Function to map if a Left/Val
+ * @param m Monad to evaluate for execution
+ * @return Monad
+ */
+function _leftFlatMap<E, T, F>(
+  fn: (e: E) => Monax<F, T>,
+  m: Monax<E, T>,
+): Monax<F, T> {
+  return isLeft(m) ? fn(m[1]) : m as Monax<F, T>;
+}
+
+function leftFlatMap<E, T, F>(fn: ((e: F) => Monax<F, T>), m: Monax<E, T>): Monax<F, T>;
+function leftFlatMap<E, T, F>(fn: ((e: F) => Promise<Monax<F, T>>), m: Monax<E, T>): Promise<Monax<F, T>>;
+function leftFlatMap<E, T, F>(fn: ((e: F) => Monax<F, T>)): ((m: Monax<E, T>) => Monax<F, T>);
+function leftFlatMap<E, T, F>(fn: ((e: F) => Promise<Monax<F, T>>)): ((m: Monax<E, T>) => Promise<Monax<F, T>>);
+function leftFlatMap<E, T, F>(this: any, fn: ((e: F) => Monax<F, T>) | ((e: F) => Promise<Monax<F, T>>), m?: Monax<E, T>) {
+  return curry(_leftFlatMap).apply(this, arguments);
+}
+
+export { leftFlatMap }
+
+export const ifErr = leftFlatMap;
+export const leftBind = leftFlatMap;
+export const errFlatMap = leftFlatMap;
 
 /**
  * LeftMap
